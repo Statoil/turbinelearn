@@ -5,11 +5,20 @@ from sklearn import linear_model
 from sklearn.cross_validation import train_test_split
 from sklearn.preprocessing import PolynomialFeatures
 
+feature_map = {
+        "Air In.Phase - Temperature.Overall.Overall"        : "AIR_IN_TEMP",
+        "Air In.Phase - Pressure.Overall.Overall"           : "AIR_IN_PRES",
+        "Discharge.Phase - Temperature.Overall.Overall"     : "DISCHARGE_TEMP",
+        "Discharge.Phase - Pressure.Overall.Overall"        : "DISCHARGE_PRES",
+        "K-100.Polytropic Efficiency.Polytropic Efficiency" : "SIMULATED_EFF"
+        }
+
 FEATURES = ["AIR_IN_TEMP", "AIR_IN_PRES", "DISCHARGE_TEMP", "DISCHARGE_PRES"]
 TARGET = "SIMULATED_EFF"
 
 def load_data(filename):
     data = pandas.read_csv(filename, sep=";", header=0)
+    data = data.rename(columns=feature_map)
     data["TIME"] = pandas.to_datetime(data["TIME"])
 
     return data
@@ -64,15 +73,21 @@ def evaluate(data, training_data, test_data, reg_mod):
 
     visualize(data, training_data, test_data, reg_mod)
 
-if __name__ == "__main__":
+def main(data_files, test_data_files=None, training_fraction=0.9, degree=1):
 
-    data = load_data("../../data/turbin_data.csv")
-    print " >> Loaded %d data points" % len(data)
+    if test_data_files is None:
+        data = load_data(data_files)
+        print " >> Loaded %d data points" % len(data)
 
-    data = preprocess_data(data)
-    print " >> After preprocessing %d data points remaining" % len(data)
+        data = preprocess_data(data)
+        print " >> After preprocessing %d data points remaining" % len(data)
 
-    data, training_data, test_data = split_data_set(data, training_fraction=0.6)
+        data, training_data, test_data = split_data_set(
+                                                    data,
+                                                    training_fraction=training_fraction
+                                                    )
+    else:
+        raise NotImplemented("This functionality is yet to be implemented")
 
     [data, training_data, test_data] = polynomialize_data([data, training_data, test_data], degree=2)
 
@@ -84,3 +99,7 @@ if __name__ == "__main__":
             test_data,
             reg_mod
             )
+
+if __name__ == "__main__":
+    # main("data/turbin_data.csv", training_fraction=0.6, degree=2)
+    main("data/LOCO_B_HGA.csv", training_fraction=0.6, degree=2)
