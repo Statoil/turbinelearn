@@ -1,9 +1,9 @@
 import pandas, numpy
 import matplotlib.pyplot as plt
-
+import seaborn as sns
 from sklearn import linear_model
-from sklearn.cross_validation import train_test_split
 from sklearn.preprocessing import PolynomialFeatures
+from sklearn.metrics import mean_squared_error
 
 feature_map = {
         "Air In.Phase - Temperature.Overall.Overall"        : "AIR_IN_TEMP",
@@ -74,9 +74,15 @@ def visualize(data, training_data, test_data, reg_mod):
     plt.show()
 
 def evaluate(data, training_data, test_data, reg_mod):
+    r2_train = reg_mod.score(*training_data)
+    r2_test  = reg_mod.score(*test_data)
+    print("R^2 score on training set: %.5f" % reg_mod.score(*training_data))
+    print("R^2 score on test set:     %.5f" % reg_mod.score(*test_data))
 
-    print "Score on training set %s" % reg_mod.score(*training_data)
-    print "Score on test set %s" %  reg_mod.score(*test_data)
+    rms_train = mean_squared_error(training_data[1], reg_mod.predict(training_data[0]))
+    rms_test  = mean_squared_error(test_data[1], reg_mod.predict(test_data[0]))
+    print("RMS score on training set: %.5f" % rms_train)
+    print("RMS score on test set:     %.5f" % rms_test)
 
     visualize(data, training_data, test_data, reg_mod)
 
@@ -84,10 +90,10 @@ def main(data_files, test_data_files=None, training_fraction=0.9, degree=1):
 
     if test_data_files is None:
         data = load_data(data_files)
-        print " >> Loaded %d data points" % len(data)
+        print(" >> Loaded %d data points" % len(data))
 
         data = preprocess_data(data)
-        print " >> After preprocessing %d data points remaining" % len(data)
+        print(" >> After preprocessing %d data points remaining" % len(data))
 
         data, training_data, test_data = split_data_set(
                                                     data,
@@ -95,13 +101,13 @@ def main(data_files, test_data_files=None, training_fraction=0.9, degree=1):
                                                     )
 
         if not (data and training_data and test_data):
-            print " >> Did not have enough data to do regression"
+            print(" >> Did not have enough data to do regression")
             return
 
     else:
         raise NotImplemented("This functionality is yet to be implemented")
 
-    [data, training_data, test_data] = polynomialize_data([data, training_data, test_data], degree=2)
+    [data, training_data, test_data] = polynomialize_data([data, training_data, test_data], degree=degree)
 
     reg_mod = linear_regression(*training_data)
 
@@ -124,5 +130,5 @@ if __name__ == "__main__":
                   "data/LOCO_C_HTB.csv"]
 
     for input_file in data_files:
-        print "Doing regression for %s" % input_file
+        print("\nDoing regression for %s" % input_file)
         main(input_file, training_fraction=0.6, degree=2)
