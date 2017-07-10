@@ -24,6 +24,7 @@ def load_data(filename):
     return data
 
 def preprocess_data(data):
+    data = data[FEATURES + [TARGET, "TIME"]]
     data = data.dropna(axis=0, how="any")
     data = data[data['DISCHARGE_PRES'] > 6]
     data = data[(0.8 <= data['AIR_IN_PRES']) & (data['AIR_IN_PRES'] <= 1.1)]
@@ -32,7 +33,12 @@ def preprocess_data(data):
     return data
 
 def split_data_set(data, training_fraction = 0.9):
-    split_time = data["TIME"][int(len(data)*training_fraction)]
+    split_index = int(len(data)*training_fraction)
+
+    if split_index >= len(data):
+        return [[]] * 3
+
+    split_time = data["TIME"][split_index]
     data = data.set_index("TIME")
 
     X = data[FEATURES]
@@ -86,6 +92,11 @@ def main(data_files, test_data_files=None, training_fraction=0.9, degree=1):
                                                     data,
                                                     training_fraction=training_fraction
                                                     )
+
+        if not (data and training_data and test_data):
+            print " >> Did not have enough data to do regression"
+            return
+
     else:
         raise NotImplemented("This functionality is yet to be implemented")
 
@@ -102,4 +113,15 @@ def main(data_files, test_data_files=None, training_fraction=0.9, degree=1):
 
 if __name__ == "__main__":
     # main("data/turbin_data.csv", training_fraction=0.6, degree=2)
-    main("data/LOCO_B_HGA.csv", training_fraction=0.6, degree=2)
+    data_files = ["data/LOCO_B_HGA.csv",
+                  "data/LOCO_B_HGB.csv",
+                  "data/LOCO_B_HTA.csv",
+                  "data/LOCO_B_HTB.csv",
+                  "data/LOCO_C_HGA.csv",
+                  "data/LOCO_C_HGB.csv",
+                  "data/LOCO_C_HTA.csv",
+                  "data/LOCO_C_HTB.csv"]
+
+    for input_file in data_files:
+        print "Doing regression for %s" % input_file
+        main(input_file, training_fraction=0.6, degree=2)
