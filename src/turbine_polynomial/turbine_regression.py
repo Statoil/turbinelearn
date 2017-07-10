@@ -5,6 +5,8 @@ from sklearn import linear_model
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.metrics import mean_squared_error
 
+from sklearn.model_selection import cross_val_score
+
 feature_map = {
         "Air In.Phase - Temperature.Overall.Overall"        : "AIR_IN_TEMP",
         "Air In.Phase - Pressure.Overall.Overall"           : "AIR_IN_PRES",
@@ -118,6 +120,24 @@ def main(data_files, test_data_files=None, training_fraction=0.9, degree=1):
             reg_mod
             )
 
+
+def individualCrossVal(data_files, training_fraction=0.9, degree=1):
+    data = load_data(data_files)
+    print(" >> Loaded %d data points" % len(data))
+
+    data = preprocess_data(data)
+    print(" >> After preprocessing %d data points remaining" % len(data))
+    #This sets data on a (X,y) format. We ingor ethe training and test_data split
+    data, training_data, test_data = split_data_set(
+                                                    data,
+                                                    training_fraction=training_fraction
+                                                    )
+    [data] = polynomialize_data([data], degree=degree)
+
+    scores = cross_val_score(linear_model.LinearRegression(), *data, cv = 5 )
+    print("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
+    print(scores)
+
 if __name__ == "__main__":
     # main("data/turbin_data.csv", training_fraction=0.6, degree=2)
     data_files = ["data/LOCO_B_HGA.csv",
@@ -131,4 +151,4 @@ if __name__ == "__main__":
 
     for input_file in data_files:
         print("\nDoing regression for %s" % input_file)
-        main(input_file, training_fraction=0.6, degree=2)
+        individualCrossVal(input_file, training_fraction=0.6, degree=2)
