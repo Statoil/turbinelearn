@@ -8,7 +8,7 @@ import turbine_regression
 def pca(data_file):
     data = turbine_regression.load_data(data_file)
     data = turbine_regression.preprocess_data(data)
-    X = data[turbine_regression.FEATURES]
+    X = data[turbine_regression.FEATURES + [turbine_regression.TARGET]]
     y = data[turbine_regression.TARGET]
     pca = PCA(n_components=2)
     X_2D = pca.fit(X).transform(X)
