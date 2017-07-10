@@ -27,6 +27,7 @@ def preprocess_data(data):
     data = data[FEATURES + [TARGET, "TIME"]]
     data = data.dropna(axis=0, how="any")
     data = data[data['DISCHARGE_PRES'] > 6]
+    data = data[(0 <= data['SIMULATED_EFF']) & (data['SIMULATED_EFF'] <= 100)]
     data = data[(0.8 <= data['AIR_IN_PRES']) & (data['AIR_IN_PRES'] <= 1.1)]
     data = data.reset_index()
 
