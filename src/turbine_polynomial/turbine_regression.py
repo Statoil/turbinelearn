@@ -17,6 +17,12 @@ DATASET = ["data/LOCO_B_HGA.csv",
            "data/LOCO_C_HTA.csv",
            "data/LOCO_C_HTB.csv"]
 
+LIMITS =   {'SPEED'         : (5000, 10000),
+            'DISCHARGE_PRES': (5, 20),
+            'SIMULATED_EFF' : (0, 100),
+            'AIR_IN_PRES'   : (0.8, 1.1),
+            'DISCHARGE_TEMP': (0, 600)}
+
 feature_map = {
     "Air In.Phase - Temperature.Overall.Overall"        : "AIR_IN_TEMP",
     "Air In.Phase - Pressure.Overall.Overall"           : "AIR_IN_PRES",
@@ -158,7 +164,7 @@ def individual_cross_validation(data_files, training_fraction=0.9, degree=1):
 
     data = preprocess_data(data)
     print(" >> After preprocessing %d data points remaining" % len(data))
-    #This sets data on a (X,y) format. We ingor ethe training and test_data split
+    # This sets data on a (X,y) format. We ignore the training and test_data split
     data, training_data, test_data = split_data_set(
                                                     data,
                                                     training_fraction=training_fraction
@@ -170,12 +176,6 @@ def individual_cross_validation(data_files, training_fraction=0.9, degree=1):
     print(scores)
 
 if __name__ == "__main__":
-    limits =   {'SPEED'         : (5000, 10000),
-                'DISCHARGE_PRES': (5, 20),
-                'SIMULATED_EFF' : (0, 100),
-                'AIR_IN_PRES'   : (0.8, 1.1),
-                'DISCHARGE_TEMP': (0, 600)}
-
     plt.title('Turbine polynomial')
     i = 1
     for input_file in DATASET:
@@ -184,7 +184,7 @@ if __name__ == "__main__":
         plt.ylabel(fname[1])
         i = i + 1
         print("\nDoing regression for %s" % input_file)
-        data = main(input_file, training_fraction=0.6, degree=3, limits=limits)
+        data = main(input_file, training_fraction=0.6, degree=3, limits=LIMITS)
         plt.subplot(8, 2, i)
         plt.ylim([0, 20*1000])
         plt.ylabel(fname[1])
@@ -193,7 +193,6 @@ if __name__ == "__main__":
         i = i + 1
     plt.show()
 
-    for input_file in data_files:
+    for input_file in DATASET:
         print("\nDoing cross validation for %s" % input_file)
         individual_cross_validation(input_file, training_fraction=0.6, degree=2)
-
