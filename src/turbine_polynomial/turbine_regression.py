@@ -1,5 +1,7 @@
+#!/usr/bin/env python
 from __future__ import print_function, absolute_import, division
 from os.path import split as path_split
+from sys import argv
 import pandas
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -7,6 +9,7 @@ from sklearn import linear_model
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import cross_val_score
+from sklearn.decomposition import PCA
 
 DATASET = ["data/LOCO_B_HGA.csv",
            "data/LOCO_B_HGB.csv",
@@ -158,6 +161,25 @@ def main(data_files, test_data_files=None, training_fraction=0.9, degree=1, limi
     return dataset
 
 
+def pca(data_file):
+    data = load_data(data_file)
+    data = preprocess_data(data)
+    X = data[FEATURES + [TARGET]]
+    y = data[TARGET]
+    pca = PCA(n_components=2)
+    X_2D = pca.fit(X).transform(X)
+    explained = pca.explained_variance_ratio_
+    print('Explained variance ratio: %.5f, %.5f' % (explained[0], explained[1]))
+
+    X_1 = [x[0] for x in X_2D]
+    X_2 = [x[1] for x in X_2D]
+
+    ### Plot the 2 dimensions with y as color of circle
+    cmap = sns.cubehelix_palette(as_cmap=True)
+
+    points = plt.scatter(X_1, X_2, c=y, cmap=cmap)
+
+
 def individual_cross_validation(data_files, training_fraction=0.9, degree=1):
     data = load_data(data_files)
     print(" >> Loaded %d data points" % len(data))
@@ -177,20 +199,24 @@ def individual_cross_validation(data_files, training_fraction=0.9, degree=1):
 
 if __name__ == "__main__":
     plt.title('Turbine polynomial')
-    i = 1
+    i = 0
     for input_file in DATASET:
         fname = path_split(input_file)
-        plt.subplot(8, 2, i)
-        plt.ylabel(fname[1])
         i = i + 1
-        print("\nDoing regression for %s" % input_file)
-        data = main(input_file, training_fraction=0.6, degree=3, limits=LIMITS)
-        plt.subplot(8, 2, i)
-        plt.ylim([0, 20*1000])
-        plt.ylabel(fname[1])
-        plt.plot(data['TIME'], data[['SPEED', 'DISCHARGE_TEMP', 'DISCHARGE_PRES']] * [1, 10, 1000],
-                 'o', markersize=2)
-        i = i + 1
+        if '--pca' in argv:
+            plt.subplot(4, 2, i)
+            plt.ylabel(fname[1])
+            pca(input_file)
+        else:
+            plt.subplot(8, 2, i)
+            plt.ylabel(fname[1])
+            print("\nDoing regression for %s" % input_file)
+            data = main(input_file, training_fraction=0.6, degree=3, limits=LIMITS)
+            X = data[['SPEED', 'DISCHARGE_TEMP', 'DISCHARGE_PRES']] * [1, 10, 1000]
+            i = i + 1
+            plt.subplot(8, 2, i)
+            plt.ylim([0, 20*1000])
+            plt.plot(data['TIME'], X, 'o', markersize=2)
     plt.show()
 
     for input_file in DATASET:
