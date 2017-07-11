@@ -7,7 +7,7 @@ from sklearn.model_selection import cross_val_score
 from sklearn.decomposition import PCA
 from sklearn.ensemble import IsolationForest
 
-from itertools import combinations, combinations_with_replacement
+from itertools import combinations_with_replacement
 
 from .turbine_file import (enum_files, load_single_file, load_data,
                            normalize_column, preprocess_data, split_data_set,
@@ -108,8 +108,8 @@ def individual_cross_validation(data_file, k=5, degree=1):
     [data] = read_and_split_files(data_file, training_fraction=0, degree=degree)
     #Split dataset into 5 consecutive folds (without shuffling by default).
     scores = cross_val_score(linear_model.LinearRegression(), *data, cv = k )
-    print("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
-    print("Scores:%s"%str(scores))
+    print("Accuracy: %0.4f (+/- %0.4f)" % (scores.mean(), scores.std() * 2))
+    print("Scores:   %s" % ", ".join(['%.4f' % s for s in scores]))
 
 
 def pca(data_file):
