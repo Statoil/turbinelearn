@@ -1,5 +1,5 @@
 import pandas
-
+from itertools import combinations
 
 FEATURES = ["AIR_IN_TEMP", "AIR_IN_PRES", "DISCHARGE_TEMP", "DISCHARGE_PRES"]
 TARGET = "SIMULATED_EFF"
@@ -22,9 +22,9 @@ FEATURE_MAP = {
 
 def enum_files(dataset, k=2):
     """For cross validation: enumerates (training, test) for k-fold cv"""
-    in_size = len(data_files)
-    data_files = set(data_files)
-    for training_set in combinations(data_files, in_size-k):
+    takeout = len(dataset) - k
+    data_files = set(dataset)
+    for training_set in combinations(dataset, takeout):
         test_set = data_files.difference(training_set)
         yield training_set, test_set
 
