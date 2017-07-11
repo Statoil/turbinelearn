@@ -1,28 +1,14 @@
-#!/usr/bin/env python
 from __future__ import print_function, absolute_import, division
-from os.path import split as path_split
-from sys import argv
 import pandas
-import matplotlib.pyplot as plt
-import seaborn as sns
+
 from sklearn import linear_model
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import cross_val_score
-from itertools import combinations
-import argparse
-
 from sklearn.decomposition import PCA
 
-DATASET_HT = ["data/LOCO_B_HTA.csv",
-              "data/LOCO_B_HTB.csv",
-              "data/LOCO_C_HTA.csv",
-              "data/LOCO_C_HTB.csv"]
-DATASET_HG = ["data/LOCO_B_HGA.csv",
-              "data/LOCO_B_HGB.csv",
-              "data/LOCO_C_HGA.csv",
-              "data/LOCO_C_HGB.csv"]
-DATASET_ALL = DATASET_HG + DATASET_HT
+from itertools import combinations
+
 
 LIMITS =   {'SPEED'          : (5000, 10000),
             'DISCHARGE_PRES' : (5, 20),
@@ -117,18 +103,6 @@ def linear_regression(X, y):
     return reg
 
 
-def visualize(data, training_data, test_data, reg_mod):
-    data_timeline = data[1].index
-    training_data_timeline = training_data[1].index
-    test_data_timeline = test_data[1].index
-
-    plt.plot(
-        data_timeline, data[1], "ro",
-        training_data_timeline, reg_mod.predict(training_data[0]), "bo",
-        test_data_timeline, reg_mod.predict(test_data[0]), "go",
-        markersize=2)
-
-
 def evaluate(data, training_data, test_data, reg_mod):
     r2_train = reg_mod.score(*training_data)
     r2_test  = reg_mod.score(*test_data)
@@ -141,7 +115,7 @@ def evaluate(data, training_data, test_data, reg_mod):
     print("RMS test:     %.5f" % rms_test)
 
 
-def main(data_files, test_data_files=None, training_fraction=0.9, degree=1, limits={}):
+def regression(data_files, test_data_files=None, training_fraction=0.9, degree=1, limits={}):
     dataset = None
     if test_data_files is None:
         data = load_data(data_files)
@@ -169,8 +143,7 @@ def main(data_files, test_data_files=None, training_fraction=0.9, degree=1, limi
     reg_mod = linear_regression(*training_data)
 
     evaluate(data, training_data, test_data, reg_mod)
-    visualize(data, training_data, test_data, reg_mod)
-    return dataset
+    return dataset, (data, training_data, test_data, reg_mod)
 
 
 def read_and_split_files(data_files,training_fraction=0.9, degree=1):
@@ -195,13 +168,8 @@ def read_and_split_files(data_files,training_fraction=0.9, degree=1):
 def train_and_evaluate_single_file(data_file, training_fraction=0.9, degree=1):
     [data, training_data, test_data] = read_and_split_files(data_file, training_fraction=training_fraction, degree=degree)
     reg_mod = linear_regression(*training_data)
-    evaluate(
-            data,
-            training_data,
-            test_data,
-            reg_mod
-            )
-    visualize(data, training_data, test_data, reg_mod)
+    evaluate(data, training_data, test_data, reg_mod)
+    return data, training_data, test_data, reg_mod
 
 
 def individual_cross_validation(data_file, k=5, degree=1):
@@ -224,12 +192,7 @@ def pca(data_file):
 
     X_1 = [x[0] for x in X_2D]
     X_2 = [x[1] for x in X_2D]
-
-    ### Plot the 2 dimensions with y as color of circle
-    cmap = sns.cubehelix_palette(as_cmap=True)
-
-    points = plt.scatter(X_1, X_2, c=y, cmap=cmap)
-
+    return X_1, X_2, y
 
 
 def filebased_cross_validation(data_files, test_data_files, degree=1):
@@ -251,72 +214,3 @@ def file_cross_val(data_files,k=2,degree=2):
     for training_set in combinations(data_files,in_size-k):
         test_set = data_files.difference(training_set)
         filebased_cross_validation(training_set,test_set,degree=degree)
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Learns a polynomial.')
-    parser.add_argument('--method', dest='method',choices=['fcv', 'icv', 'simple', 'pca', 'reg'], required=True,
-                        help='Uses either filebased cross validation (fcv), individual file cross validation (icv), run a single train-test run on each file (simple) or do PCA (pca)')
-    parser.add_argument('--degree', dest='degree',type=int, choices=range(1, 10), default=2,
-                        help='The degree of the polynomial to train, defaults to 2')
-
-    parser.add_argument('--training-fraction', dest='training_fraction',type=float, default=0.6,
-                        help='The fraction of data to use as training data, only useed when method=simple')
-    parser.add_argument('--k', dest='k',type=int, choices=range(1, 10), default=2,
-                        help='The number of folds to keep out when using cross validation. For method=fcv it is the number of files to keep out')
-    parser.add_argument('--dataset', dest='dataset', choices=['HG','HT','all'], default='all',
-                        help='The dataset to use, HG, HT, or all.')
-
-    args = parser.parse_args()
-
-    DATASET = DATASET_ALL
-    if args.dataset == 'HG':
-        DATASET = DATASET_HG
-    elif args.dataset == 'HT':
-        DATASET = DATASET_HT
-
-    degree = args.degree
-    training_fraction = args.training_fraction
-    k = args.k
-
-    if args.method == 'fcv':
-        file_cross_val(DATASET,k=k,degree=degree)
-    if args.method == 'icv':
-        for input_file in DATASET:
-            print("\nDoing individual cross validation for %s" % input_file)
-            individual_cross_validation(input_file, degree=degree)
-    if args.method == 'simple':
-        for input_file in DATASET:
-            print("\nDoing regression for %s" % input_file)
-            train_and_evaluate_single_file(input_file,
-                                           training_fraction = training_fraction,
-                                           degree=degree)
-
-
-    if args.method == "pca":
-        plt.title('Turbine polynomial PCA')
-        i = 0
-        for input_file in DATASET:
-            fname = path_split(input_file)
-            i = i + 1
-            plt.subplot(len(DATASET)//2, 2, i)
-            plt.ylabel(fname[1])
-            pca(input_file)
-        plt.show()
-
-    if args.method == 'reg':
-        plt.title('Turbine polynomial')
-        i = 0
-        for input_file in DATASET:
-            fname = path_split(input_file)
-            i = i + 1
-            plt.subplot(len(DATASET), 2, i)
-            plt.ylabel(fname[1])
-            print("\nDoing regression for %s" % input_file)
-            data = main(input_file, training_fraction=0.6, degree=3, limits=LIMITS)
-            X = data[['SPEED', 'DISCHARGE_TEMP', 'DISCHARGE_PRES']] * [1, 10, 1000]
-            i = i + 1
-            plt.subplot(len(DATASET), 2, i)
-            plt.ylim([0, 20*1000])
-            plt.plot(data['TIME'], X, 'o', markersize=2)
-        plt.show()

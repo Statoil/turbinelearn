@@ -9,7 +9,6 @@ def turbine_test_suite():
 setup(
     name="turbinelearn",
     packages=["turbinelearn"],
-    package_dir={"turbinelearn" : "src/turbinelearn"},
-    test_suite='setup.turbine_test_suite',
-    zip_safe=False
+    package_dir={"turbinelearn" : "python/turbinelearn"},
+    test_suite='setup.turbine_test_suite'
 )
