@@ -55,6 +55,8 @@ def load_single_file(filename):
     data = pandas.read_csv(filename, sep=";", header=0)
     data = data.rename(columns=feature_map)
     data["TIME"] = pandas.to_datetime(data["TIME"])
+    # Marks the dataset as comming from a variable (HG) or full (HT) -speed turbine
+    data["TURBINE_TYPE"] = 0 if "HG" in filename.upper() else 1
     return data
 
 
