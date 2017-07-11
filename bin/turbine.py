@@ -11,16 +11,6 @@ from turbinelearn import *
 
 LearningParameter = namedtuple('LearningParameter', ['dataset', 'degree', 'training_fraction', 'k'])
 
-DATASET_HT = ["data/LOCO_B_HTA.csv",
-              "data/LOCO_B_HTB.csv",
-              "data/LOCO_C_HTA.csv",
-              "data/LOCO_C_HTB.csv"]
-DATASET_HG = ["data/LOCO_B_HGA.csv",
-              "data/LOCO_B_HGB.csv",
-              "data/LOCO_C_HGA.csv",
-              "data/LOCO_C_HGB.csv"]
-DATASET_ALL = DATASET_HG + DATASET_HT
-
 
 def visualize(data, training_data, test_data, reg_mod):
     data_timeline = data[1].index
@@ -32,7 +22,6 @@ def visualize(data, training_data, test_data, reg_mod):
         training_data_timeline, reg_mod.predict(training_data[0]), "bo",
         test_data_timeline, reg_mod.predict(test_data[0]), "go",
         markersize=2)
-
 
 
 def create_argparse():
@@ -47,7 +36,7 @@ def create_argparse():
                         help='The number of folds to keep out when using cross validation. For method=fcv it is the number of files to keep out')
     parser.add_argument('--dataset', dest='dataset', choices=['HG','HT','all'], default='all',
                         help='The dataset to use, HG, HT, or all.')
-    return parser.parse_args()
+    return parser.parse_known_args()
 
 
 def method_fcv(params):
@@ -121,11 +110,15 @@ def main(args, dataset):
     fn = methods[args.method]
     fn(params)
 
+def filter_dataset(dataset, filter):
+    """filter in (None, 'HG', HT')"""
+    if filter not in (None, '', False, 'all', 'HG', 'HT'):
+        raise KeyError('Unknown filter "%s"' % filter)
+    if not filter or filter == 'all':
+        return dataset
+    return [fname for fname in dataset if filter in fname]
+
 if __name__ == "__main__":
-    args = create_argparse()
-    dataset = DATASET_ALL
-    if args.dataset == 'HG':
-        dataset = DATASET_HG
-    elif args.dataset == 'HT':
-        dataset = DATASET_HT
+    args, dataset = create_argparse()
+    dataset = filter_dataset(dataset, args.dataset)
     main(args, dataset)
