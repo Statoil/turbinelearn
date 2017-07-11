@@ -128,13 +128,16 @@ def pca(data_file):
 
 
 def generate_polynomial(linear_model, degree, features=FEATURES):
-    polypoly = str(linear_model.coef_[0] + linear_model.intercept_)
+    float_fmt = '%.4f'
+    polypoly = float_fmt % (linear_model.coef_[0] + linear_model.intercept_)
+
+    term = lambda coef, vars: "*".join([float_fmt % abs(coef)] + list(vars))
 
     variables = list(combinations_with_replacement(FEATURES,degree))
     for variable, coef in zip(variables, linear_model.coef_[1:]):
-        variable = map (lambda X: "<" + X + ">", variable)
-        polypoly += (" + " if coef >= 0 else " - ")
-        polypoly += "*".join([str(abs(coef))] + list(variable))
+        variable = map(lambda X: "<" + X + ">", variable)
+        polypoly += "\n\t+ " if coef >= 0 else "\n\t- "
+        polypoly += term(coef, variable)
 
     return polypoly
 
