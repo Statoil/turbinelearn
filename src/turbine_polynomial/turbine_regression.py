@@ -22,7 +22,7 @@ DATASET_HG = ["data/LOCO_B_HGA.csv",
               "data/LOCO_B_HGB.csv",
               "data/LOCO_C_HGA.csv",
               "data/LOCO_C_HGB.csv"]
-DATASET = DATASET_HG + DATASET_HT
+DATASET_ALL = DATASET_HG + DATASET_HT
 
 LIMITS =   {'SPEED'          : (5000, 10000),
             'DISCHARGE_PRES' : (5, 20),
@@ -253,7 +253,7 @@ def file_cross_val(data_files,k=2,degree=2):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Learns a polynomial.')
-    parser.add_argument('--method', dest='method',choices=['fcv', 'icv', 'simple', 'pca', 'all'], required=True,
+    parser.add_argument('--method', dest='method',choices=['fcv', 'icv', 'simple', 'pca', 'reg'], required=True,
                         help='Uses either filebased cross validation (fcv), individual file cross validation (icv), run a single train-test run on each file (simple) or do PCA (pca)')
     parser.add_argument('--degree', dest='degree',type=int, choices=range(1, 10), default=2,
                         help='The degree of the polynomial to train, defaults to 2')
@@ -262,8 +262,16 @@ if __name__ == "__main__":
                         help='The fraction of data to use as training data, only useed when method=simple')
     parser.add_argument('--k', dest='k',type=int, choices=range(1, 10), default=2,
                         help='The number of folds to keep out when using cross validation. For method=fcv it is the number of files to keep out')
+    parser.add_argument('--dataset', dest='dataset', choices=['HG','HT','all'], default='all',
+                        help='The dataset to use, HG, HT, or all.')
 
     args = parser.parse_args()
+
+    DATASET = DATASET_ALL
+    if args.dataset == 'HG':
+        DATASET = DATASET_HG
+    elif args.dataset == 'HT':
+        DATASET = DATASET_HT
 
     degree = args.degree
     training_fraction = args.training_fraction
@@ -289,24 +297,24 @@ if __name__ == "__main__":
         for input_file in DATASET:
             fname = path_split(input_file)
             i = i + 1
-            plt.subplot(4, 2, i)
+            plt.subplot(len(DATASET)//2, 2, i)
             plt.ylabel(fname[1])
             pca(input_file)
         plt.show()
 
-    if args.method == 'all':
+    if args.method == 'reg':
         plt.title('Turbine polynomial')
         i = 0
         for input_file in DATASET:
             fname = path_split(input_file)
             i = i + 1
-            plt.subplot(8, 2, i)
+            plt.subplot(len(DATASET), 2, i)
             plt.ylabel(fname[1])
             print("\nDoing regression for %s" % input_file)
             data = main(input_file, training_fraction=0.6, degree=3, limits=LIMITS)
             X = data[['SPEED', 'DISCHARGE_TEMP', 'DISCHARGE_PRES']] * [1, 10, 1000]
             i = i + 1
-            plt.subplot(8, 2, i)
+            plt.subplot(len(DATASET), 2, i)
             plt.ylim([0, 20*1000])
             plt.plot(data['TIME'], X, 'o', markersize=2)
         plt.show()
