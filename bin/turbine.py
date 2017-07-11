@@ -9,7 +9,7 @@ import seaborn as sns
 
 from turbinelearn import *
 
-LearningParameter = namedtuple('LearningParameter', ['dataset', 'degree', 'training_fraction', 'k'])
+LearningParameter = namedtuple('LearningParameter', ['dataset', 'degree', 'training_fraction', 'k', 'clean'])
 
 
 def visualize(data, training_data, test_data, reg_mod):
@@ -30,6 +30,12 @@ def create_argparse():
                         help='Uses either filebased cross validation (fcv), individual file cross validation (icv), run a single train-test run on each file (simple) or do PCA (pca)')
     parser.add_argument('--degree', dest='degree',type=int, choices=range(1, 10), default=2,
                         help='The degree of the polynomial to train, defaults to 2')
+
+    parser.add_argument('--clean', dest='clean', action='store_true',
+                        help='Whether to perform data cleanup (recommended), defaults to --clean.')
+    parser.add_argument('--no-clean', dest='clean', action='store_false')
+    parser.set_defaults(clean=True)
+
     parser.add_argument('--training-fraction', dest='training_fraction',type=float, default=0.6,
                         help='The fraction of data to use as training data, only useed when method=simple')
     parser.add_argument('--k', dest='k',type=int, choices=range(1, 10), default=2,
@@ -39,14 +45,18 @@ def create_argparse():
     return parser.parse_known_args()
 
 
+def get_limits(params):
+    return LIMITS if params.clean else {}
+
+
 def method_fcv(params):
-    file_cross_val(params.dataset, k=params.k, degree=params.degree)
+    file_cross_val(params.dataset, k=params.k, degree=params.degree, limits=get_limits(params))
 
 
 def method_icv(params):
     for input_file in params.dataset:
         print("\nDoing individual cross validation for %s" % input_file)
-        individual_cross_validation(input_file, degree=params.degree)
+        individual_cross_validation(input_file, degree=params.degree, limits=get_limits(params))
 
 
 def method_simple(params):
@@ -54,7 +64,8 @@ def method_simple(params):
         print("\nDoing regression for %s" % input_file)
         full_model= train_and_evaluate_single_file(input_file,
                                                    training_fraction=params.training_fraction,
-                                                   degree=params.degree)
+                                                   degree=params.degree,
+                                                   limits=get_limits(params))
         visualize(*full_model)
 
 
@@ -67,31 +78,43 @@ def method_pca(params):
         i = i + 1
         plt.subplot(N//2, 2, i)
         plt.ylabel(fname[1])
-        X_1, X_2, y = pca(input_file)
+        X_1, X_2, y = pca(input_file, limits=get_limits(params))
         ### Plot the 2 dimensions with y as color of circle
         cmap = sns.cubehelix_palette(as_cmap=True)
         plt.scatter(X_1, X_2, c=y, cmap=cmap)
     plt.show()
 
 
+def _plot_reg(params, data, i):
+    plt.subplot(len(params.dataset), 2, (2*i)+2)
+    plt.ylim([0, 20*1000])
+    p_speed, = plt.plot(data['TIME'],
+                        data['SPEED'],
+                        'o', markersize=2, label='SPEED')
+    p_dtemp, = plt.plot(data['TIME'],
+                          data['DISCHARGE_TEMP'] * 10,
+                          'o', markersize=2, label='DISCHARGE_TEMP')
+    p_dpres, = plt.plot(data['TIME'],
+                        data['DISCHARGE_PRES'] * 1000,
+                        'o', markersize=2, label='DISCHARGE_PRES')
+    plt.legend(handles=[p_speed, p_dtemp, p_dpres])
+
+
 def method_reg(params):
     plt.title('Turbine polynomial')
-    i = 0
-    for input_file in params.dataset:
+    N = len(params.dataset)
+    for i in range(N):
+        input_file = params.dataset[i]
         fname = path_split(input_file)
-        i = i + 1
-        plt.subplot(len(params.dataset), 2, i)
+        plt.subplot(len(params.dataset), 2, (2*i)+1)
         plt.ylabel(fname[1])
         print("\nDoing regression for %s" % input_file)
-        data, full_model = regression(input_file, training_fraction=0.6, degree=3, limits=LIMITS)
-
+        data, full_model = regression(input_file,
+                                      training_fraction=params.training_fraction,
+                                      degree=params.degree,
+                                      limits=get_limits(params))
         visualize(*full_model)
-
-        X = data[['SPEED', 'DISCHARGE_TEMP', 'DISCHARGE_PRES']] * [1, 10, 1000]
-        i = i + 1
-        plt.subplot(len(params.dataset), 2, i)
-        plt.ylim([0, 20*1000])
-        plt.plot(data['TIME'], X, 'o', markersize=2)
+        _plot_reg(params, data, i)
     plt.show()
 
 
@@ -99,7 +122,8 @@ def main(args, dataset):
     params = LearningParameter(dataset=dataset,
                                degree=args.degree,
                                training_fraction=args.training_fraction,
-                               k=args.k)
+                               k=args.k,
+                               clean=args.clean)
     methods = {
         'fcv'    : method_fcv,
         'icv'    : method_icv,
@@ -121,4 +145,6 @@ def filter_dataset(dataset, filter):
 if __name__ == "__main__":
     args, dataset = create_argparse()
     dataset = filter_dataset(dataset, args.dataset)
+    if not dataset:
+        exit('Usage: turbine --method=pca data/LOCO*csv')
     main(args, dataset)

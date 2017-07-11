@@ -54,6 +54,8 @@ def normalize_column(data, field):
 
 
 def preprocess_data(data, features=FEATURES, target=TARGET, normalize=(), limits={}):
+    if limits is None:
+        limits = {}
     for key in limits:
         min_, max_ = limits[key]
         data = data[(min_ <= data[key]) & (data[key] <= max_)]
@@ -67,7 +69,7 @@ def preprocess_data(data, features=FEATURES, target=TARGET, normalize=(), limits
     return data
 
 
-def split_data_set(data, training_fraction = 0.9):
+def split_data_set(data, training_fraction=0.6):
     split_index = int(len(data)*training_fraction)
 
     if split_index >= len(data):

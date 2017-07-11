@@ -11,7 +11,7 @@ from itertools import combinations_with_replacement
 
 from .turbine_file import (enum_files, load_single_file, load_data,
                            normalize_column, preprocess_data, split_data_set,
-                           FEATURES, TARGET, LIMITS)
+                           FEATURES, TARGET)
 
 
 def detect_outliers(data):
@@ -47,7 +47,7 @@ def evaluate(data, training_data, test_data, reg_mod):
     print("Generated polynomial:\n\t %s" % generate_polynomial(reg_mod,2))
 
 
-def regression(data_files, test_data_files=None, training_fraction=0.9, degree=1, limits={}):
+def regression(data_files, test_data_files=None, training_fraction=0.6, degree=2, limits=None):
     dataset = None
     if test_data_files is None:
         data = load_data(data_files)
@@ -78,11 +78,11 @@ def regression(data_files, test_data_files=None, training_fraction=0.9, degree=1
     return dataset, (data, training_data, test_data, reg_mod)
 
 
-def read_and_split_files(data_files,training_fraction=0.9, degree=1):
+def read_and_split_files(data_files, training_fraction=0.6, degree=2, limits=None):
     data = load_data(data_files)
     print(" >> Loaded %d data points" % len(data))
 
-    data = preprocess_data(data, limits=LIMITS)
+    data = preprocess_data(data, limits=limits)
     print(" >> After preprocessing %d data points remaining" % len(data))
     if training_fraction > 0:
         data, training_data, test_data = split_data_set(data, training_fraction=training_fraction)
@@ -97,24 +97,27 @@ def read_and_split_files(data_files,training_fraction=0.9, degree=1):
         return polynomialize_data([data], degree=degree)
 
 
-def train_and_evaluate_single_file(data_file, training_fraction=0.9, degree=1):
-    [data, training_data, test_data] = read_and_split_files(data_file, training_fraction=training_fraction, degree=degree)
+def train_and_evaluate_single_file(data_file, training_fraction=0.6, degree=2, limits=None):
+    [data, training_data, test_data] = read_and_split_files(data_file,
+                                                            training_fraction=training_fraction,
+                                                            degree=degree,
+                                                            limits=limits)
     reg_mod = linear_regression(*training_data)
     evaluate(data, training_data, test_data, reg_mod)
     return data, training_data, test_data, reg_mod
 
 
-def individual_cross_validation(data_file, k=5, degree=1):
-    [data] = read_and_split_files(data_file, training_fraction=0, degree=degree)
+def individual_cross_validation(data_file, k=5, degree=2, limits=None):
+    [data] = read_and_split_files(data_file, training_fraction=0, degree=degree, limits=limits)
     #Split dataset into 5 consecutive folds (without shuffling by default).
     scores = cross_val_score(linear_model.LinearRegression(), *data, cv = k )
     print("Accuracy: %0.4f (+/- %0.4f)" % (scores.mean(), scores.std() * 2))
     print("Scores:   %s" % ", ".join(['%.4f' % s for s in scores]))
 
 
-def pca(data_file):
+def pca(data_file, limits=None):
     data = load_data(data_file)
-    data = preprocess_data(data, limits=LIMITS)
+    data = preprocess_data(data, limits=limits)
     X = data[FEATURES + [TARGET]]
     y = data[TARGET]
     pca = PCA(n_components=2)
@@ -133,7 +136,7 @@ def generate_polynomial(linear_model, degree, features=FEATURES):
 
     term = lambda coef, vars: "*".join([float_fmt % abs(coef)] + list(vars))
 
-    variables = list(combinations_with_replacement(FEATURES,degree))
+    variables = list(combinations_with_replacement(FEATURES, degree))
     for variable, coef in zip(variables, linear_model.coef_[1:]):
         variable = map(lambda X: "<" + X + ">", variable)
         polypoly += "\n\t+ " if coef >= 0 else "\n\t- "
@@ -142,19 +145,19 @@ def generate_polynomial(linear_model, degree, features=FEATURES):
     return polypoly
 
 
-def filebased_cross_validation(data_files, test_data_files, degree=1):
+def filebased_cross_validation(data_files, test_data_files, degree=2, limits=None):
     print("\nTraining on data_files %s " % ", ".join(data_files))
 
-    [data] = read_and_split_files(data_files, training_fraction=0, degree=degree)
+    [data] = read_and_split_files(data_files, training_fraction=0, degree=degree, limits=limits)
     reg_mod = linear_regression(*data)
 
     print("Testing on test_data_files %s" % ", ".join(test_data_files))
     for input_file in test_data_files:
-        [data] = read_and_split_files(input_file,training_fraction=0, degree=degree)
+        [data] = read_and_split_files(input_file,training_fraction=0, degree=degree, limits=limits)
         score = reg_mod.score(*data)
         print("Score on %s is %.4f" % (input_file, score))
 
 
-def file_cross_val(data_files, k=2, degree=2):
+def file_cross_val(data_files, k=2, degree=2, limits=None):
     for training_set, test_set in enum_files(data_files, k):
-        filebased_cross_validation(training_set, test_set, degree=degree)
+        filebased_cross_validation(training_set, test_set, degree=degree, limits=limits)
