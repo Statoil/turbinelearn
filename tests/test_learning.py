@@ -18,7 +18,7 @@ class TestLearning(TestCase):
         self.assertIn('OUTLIER', self.data)
 
     def test_pca(self):
-        X_1, X_2, y = tblearn.pca(self.fname)
+        X_1, X_2, y = tblearn.pca(self.fname, limits=tblearn.LIMITS)
         self.assertEqual(1489, len(X_1))
         self.assertEqual(len(X_1), len(X_2))
         self.assertEqual(len(X_1), len(y))
