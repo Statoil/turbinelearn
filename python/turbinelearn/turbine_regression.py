@@ -5,6 +5,7 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import cross_val_score
 from sklearn.decomposition import PCA
+from sklearn.ensemble import IsolationForest
 
 from itertools import combinations, combinations_with_replacement
 

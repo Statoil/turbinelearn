@@ -28,6 +28,7 @@ def enum_files(dataset, k=2):
         test_set = data_files.difference(training_set)
         yield training_set, test_set
 
+
 def load_single_file(filename):
     data = pandas.read_csv(filename, sep=";", header=0)
     data = data.rename(columns=FEATURE_MAP)
@@ -52,11 +53,11 @@ def normalize_column(data, field):
     data[field] /= dif_
 
 
-def preprocess_data(data, normalize=(), limits={}):
+def preprocess_data(data, features=FEATURES, target=TARGET, normalize=(), limits={}):
     for key in limits:
         min_, max_ = limits[key]
         data = data[(min_ <= data[key]) & (data[key] <= max_)]
-    data = data[FEATURES + [TARGET, "TIME", 'SPEED']]
+    data = data[features + [target, "TIME"]]
     data = data.dropna(axis=0, how="any")
     data = data.reset_index()
 
