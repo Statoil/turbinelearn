@@ -7,7 +7,7 @@ from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import cross_val_score
 from sklearn.decomposition import PCA
 
-from itertools import combinations
+from itertools import combinations, combinations_with_replacement
 
 
 LIMITS =   {'SPEED'          : (5000, 10000),
@@ -114,6 +114,8 @@ def evaluate(data, training_data, test_data, reg_mod):
     print("RMS training: %.5f" % rms_train)
     print("RMS test:     %.5f" % rms_test)
 
+    print("Generated polynomial:\n\t %s" % generate_polynomial(reg_mod,2))
+
 
 def regression(data_files, test_data_files=None, training_fraction=0.9, degree=1, limits={}):
     dataset = None
@@ -193,6 +195,18 @@ def pca(data_file):
     X_1 = [x[0] for x in X_2D]
     X_2 = [x[1] for x in X_2D]
     return X_1, X_2, y
+
+
+def generate_polynomial(linear_model, degree, features=FEATURES):
+    polypoly = str(linear_model.coef_[0] + linear_model.intercept_)
+
+    variables = list(combinations_with_replacement(FEATURES,degree))
+    for variable, coef in zip(variables, linear_model.coef_[1:]):
+        variable = map (lambda X: "<" + X + ">", variable)
+        polypoly += (" + " if coef >= 0 else " - ")
+        polypoly += "*".join([str(abs(coef))] + list(variable))
+
+    return polypoly
 
 
 def filebased_cross_validation(data_files, test_data_files, degree=1):
