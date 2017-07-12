@@ -5,7 +5,7 @@ import turbinelearn as tblearn
 class TestLoadingData(TestCase):
 
     def setUp(self):
-        self.data = tblearn.load_data('data/turbin_data.csv')
+        self.data = tblearn.load_data('old_data/turbin_data.csv')
 
     def test_load(self):
         self.assertEqual(2922, len(self.data))
