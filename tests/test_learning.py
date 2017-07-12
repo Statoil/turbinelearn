@@ -5,7 +5,7 @@ import turbinelearn as tblearn
 class TestLearning(TestCase):
 
     def setUp(self):
-        self.fname = 'data/turbin_data.csv'
+        self.fname = 'old_data/turbin_data.csv'
         self.data = tblearn.load_data(self.fname)
 
     def preprocess(self):

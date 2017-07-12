@@ -9,7 +9,7 @@ import seaborn as sns
 
 from turbinelearn import *
 
-LearningParameter = namedtuple('LearningParameter', ['dataset', 'degree', 'training_fraction', 'k', 'clean'])
+LearningParameter = namedtuple('LearningParameter', ['dataset', 'degree', 'training_fraction', 'k', 'clean', 'dual_model'])
 
 
 def visualize(data, training_data, test_data, reg_mod):
@@ -42,6 +42,8 @@ def create_argparse():
                         help='The number of folds to keep out when using cross validation. For method=fcv it is the number of files to keep out')
     parser.add_argument('--dataset', dest='dataset', choices=['HG','HT','all'], default='all',
                         help='The dataset to use, HG, HT, or all.')
+    parser.add_argument('--dual_model', dest='dual_model', choices=["on", "off"], default='off',
+                        help='Will build separate models for HG and HT before combining them')
     return parser.parse_known_args()
 
 
@@ -50,7 +52,7 @@ def get_limits(params):
 
 
 def method_fcv(params):
-    file_cross_val(params.dataset, k=params.k, degree=params.degree, limits=get_limits(params))
+    file_cross_val(params.dataset, k=params.k, degree=params.degree, limits=get_limits(params), dual_model=params.dual_model)
 
 
 def method_icv(params):
@@ -123,7 +125,8 @@ def main(args, dataset):
                                degree=args.degree,
                                training_fraction=args.training_fraction,
                                k=args.k,
-                               clean=args.clean)
+                               clean=args.clean,
+                               dual_model=args.dual_model=="on")
     methods = {
         'fcv'    : method_fcv,
         'icv'    : method_icv,

@@ -1,5 +1,7 @@
 from __future__ import print_function, absolute_import, division
 
+import numpy as np
+
 from sklearn import linear_model
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.metrics import mean_squared_error
@@ -12,6 +14,8 @@ from itertools import combinations_with_replacement
 from .turbine_file import (enum_files, load_single_file, load_data,
                            normalize_column, preprocess_data, split_data_set,
                            FEATURES, TARGET)
+
+from .dual_linear_regression import DualLinearModel
 
 
 def detect_outliers(data):
@@ -96,6 +100,23 @@ def read_and_split_files(data_files, training_fraction=0.6, degree=2, limits=Non
         data=(X,y)
         return polynomialize_data([data], degree=degree)
 
+def fetch_data(data_files, degree=1, dual_model=False, limits=None):
+    data = load_data(data_files)
+    print(" >> Loaded %d data points" % len(data))
+
+    load_features = FEATURES+["TURBINE_TYPE"]
+    data = preprocess_data(data, features=load_features, limits=limits)
+    print(" >> After preprocessing %d data points remaining" % len(data))
+
+    X, y = data[FEATURES], data[TARGET]
+
+    if degree > 1:
+        X = PolynomialFeatures(degree=degree, include_bias=False).fit_transform(X)
+
+    if dual_model:
+        X = DualLinearModel.format(X, np.array(data["TURBINE_TYPE"]))
+
+    return (X, y)
 
 def train_and_evaluate_single_file(data_file, training_fraction=0.6, degree=2, limits=None):
     [data, training_data, test_data] = read_and_split_files(data_file,
@@ -145,19 +166,31 @@ def generate_polynomial(linear_model, degree, features=FEATURES):
     return polypoly
 
 
-def filebased_cross_validation(data_files, test_data_files, degree=2, limits=None):
+
+def filebased_cross_validation(data_files, test_data_files, degree=1,
+        dual_model=False, limits=None):
+
     print("\nTraining on data_files %s " % ", ".join(data_files))
 
-    [data] = read_and_split_files(data_files, training_fraction=0, degree=degree, limits=limits)
-    reg_mod = linear_regression(*data)
+    data = fetch_data(data_files, degree=degree,
+                      dual_model=dual_model, limits=limits)
+
+    if dual_model:
+        reg_mod = DualLinearModel.dual_regression(*data)
+    else:
+        reg_mod = linear_regression(*data)
 
     print("Testing on test_data_files %s" % ", ".join(test_data_files))
     for input_file in test_data_files:
-        [data] = read_and_split_files(input_file,training_fraction=0, degree=degree, limits=limits)
+        data = fetch_data(test_data_files, degree=degree,
+                          dual_model=dual_model, limits=limits)
+
         score = reg_mod.score(*data)
         print("Score on %s is %.4f" % (input_file, score))
 
 
-def file_cross_val(data_files, k=2, degree=2, limits=None):
+def file_cross_val(data_files, k=2, degree=2, dual_model=False, limits=None):
     for training_set, test_set in enum_files(data_files, k):
-        filebased_cross_validation(training_set, test_set, degree=degree, limits=limits)
+        filebased_cross_validation(training_set, test_set,
+                                   degree=degree, dual_model=dual_model,
+                                   limits=limits)
