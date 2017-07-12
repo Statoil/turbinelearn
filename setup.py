@@ -1,5 +1,5 @@
 from setuptools import setup
-
+import unittest
 
 def turbine_test_suite():
     test_loader = unittest.TestLoader()
