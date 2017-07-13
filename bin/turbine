@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from __future__ import print_function, absolute_import, division
+import math
 from os.path import split as path_split
 from collections import namedtuple
 import argparse
@@ -117,7 +118,8 @@ def method_pca(params):
     for input_file in params.dataset:
         fname = path_split(input_file)
         i = i + 1
-        plt.subplot(N//2, 2, i)
+        if N > 1:
+            plt.subplot(math.ceil(N/2.0), 2, i)
         plt.ylabel(fname[1])
         X_1, X_2, y = pca(input_file, limits=get_limits(params))
         ### Plot the 2 dimensions with y as color of circle
