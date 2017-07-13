@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from __future__ import print_function, absolute_import, division
+import math
 from os.path import split as path_split
 from collections import namedtuple
 import argparse
@@ -48,6 +49,9 @@ def create_argparse():
                         help='Will build separate models for HG and HT before combining them, defaults to --no-dual')
     parser.add_argument('--no-dual', dest='dual', action='store_false')
     parser.set_defaults(dual=False)
+
+    parser.add_argument('-v', '--version', dest='version', action='store_true',
+                        help='Prints version and exits.')
 
     return parser.parse_known_args()
 
@@ -114,7 +118,8 @@ def method_pca(params):
     for input_file in params.dataset:
         fname = path_split(input_file)
         i = i + 1
-        plt.subplot(N//2, 2, i)
+        if N > 1:
+            plt.subplot(math.ceil(N/2.0), 2, i)
         plt.ylabel(fname[1])
         X_1, X_2, y = pca(input_file, limits=get_limits(params))
         ### Plot the 2 dimensions with y as color of circle
@@ -185,6 +190,9 @@ if __name__ == "__main__":
     args, dataset = create_argparse()
     if args.dual and args.dataset in ['HG', 'HT']:
         exit('Cannot use both --dual and --dataset')
+    if args.version:
+        print('turbinelearn version %s' % TURBINELEARN_VERSION)
+        exit(0)
     dataset = filter_dataset(dataset, args.dataset)
     if not dataset:
         exit('Usage: turbine --method=pca data/LOCO*csv')
