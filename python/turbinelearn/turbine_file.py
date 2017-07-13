@@ -1,14 +1,20 @@
 import pandas
 from itertools import combinations
 
+from datetime import datetime as dt
+
 FEATURES = ["AIR_IN_TEMP", "AIR_IN_PRES", "DISCHARGE_TEMP", "DISCHARGE_PRES"]
 TARGET = "SIMULATED_EFF"
 
+
 LIMITS =   {'SPEED'          : (5000, 10000),
-            'DISCHARGE_PRES' : (5, 20),
             'SIMULATED_EFF'  : (0, 100),
+            'AIR_IN_TEMP'    : (-50, 50),
             'AIR_IN_PRES'    : (0.8, 1.1),
-            'DISCHARGE_TEMP' : (0, 600)}
+            'DISCHARGE_TEMP' : (0, 600),
+            'DISCHARGE_PRES' : (5, 20),
+            'TIME':            (dt(2016,02,01), dt(2100,1,1))  # 2016-01 seems to be broken
+}
 
 FEATURE_MAP = {
     "Air In.Phase - Temperature.Overall.Overall"        : "AIR_IN_TEMP",
@@ -58,6 +64,8 @@ def preprocess_data(data, features=FEATURES, target=TARGET, limits={}, normalize
         limits = {}
     for key in limits:
         min_, max_ = limits[key]
+        if key == 'TIME':
+            continue
         data = data[(min_ <= data[key]) & (data[key] <= max_)]
     data = data[features + [target, "TIME"]]
     data = data.dropna(axis=0, how="any")
@@ -69,6 +77,9 @@ def preprocess_data(data, features=FEATURES, target=TARGET, limits={}, normalize
     for field in normalize:
         normalize_column(data, field)
     data = data.set_index("TIME")
+    if 'TIME' in limits:
+        min_, max_ = limits['TIME']
+        data = data.ix[min_:max_]
     return data
 
 

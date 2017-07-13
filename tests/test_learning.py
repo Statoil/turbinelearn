@@ -19,7 +19,7 @@ class TestLearning(TestCase):
 
     def test_pca(self):
         X_1, X_2, y = tblearn.pca(self.fname, limits=tblearn.LIMITS)
-        self.assertEqual(1489, len(X_1))
+        self.assertEqual(1438, len(X_1))
         self.assertEqual(len(X_1), len(X_2))
         self.assertEqual(len(X_1), len(y))
 

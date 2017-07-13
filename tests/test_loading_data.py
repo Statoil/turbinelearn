@@ -1,4 +1,5 @@
 import os
+from datetime import datetime as dt
 from unittest import TestCase
 import turbinelearn as tblearn
 
@@ -39,3 +40,16 @@ class TestLoadingData(TestCase):
 
         self.assertTrue(speed_min <= min(data['SPEED']))
         self.assertTrue(max(data['SPEED']) <= speed_max)
+
+    def test_limit_time(self):
+        window = dt(2016,12,01), dt(2017,01,01)
+        limits = {'TIME': window}
+        features = tblearn.FEATURES
+        data = tblearn.preprocess_data(self.data, features=features, limits=limits)
+        self.assertEqual(6*31, len(data))  # ~6 measures per 31 days (=186)
+        # First row: 12/1/2016 2:00;17.248752;1.0051291;24.002418;1.0174102;...
+        accuracy = 3 # 3 digits?
+        self.assertAlmostEqual(data['AIR_IN_TEMP'][0],    17.2488, accuracy)
+        self.assertAlmostEqual(data['AIR_IN_PRES'][0],    01.0051, accuracy)
+        self.assertAlmostEqual(data['DISCHARGE_TEMP'][0], 24.0024, accuracy)
+        self.assertAlmostEqual(data['DISCHARGE_PRES'][0], 01.0174, accuracy)
