@@ -10,8 +10,8 @@ from .turbine_regression import detect_outliers
 
 from .dual_linear_regression import DualLinearModel
 
-TURBINELEARN_VERSION = '0.2.0'
-__version__ = '0.2.0'
+TURBINELEARN_VERSION = '0.2.1'
+__version__ = TURBINELEARN_VERSION
 
 __copyright__ = 'Copyright 2017, Statoil ASA'
 __license__ = 'GNU General Public License, version 3 or any later version'
