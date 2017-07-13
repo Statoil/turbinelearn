@@ -63,6 +63,9 @@ def preprocess_data(data, features=FEATURES, target=TARGET, limits={}, normalize
     data = data.dropna(axis=0, how="any")
     data = data.reset_index()
 
+    if len(data.index) == 0:
+        raise ValueError('Empty dataset after preprocessing!')
+
     for field in normalize:
         normalize_column(data, field)
     data = data.set_index("TIME")
