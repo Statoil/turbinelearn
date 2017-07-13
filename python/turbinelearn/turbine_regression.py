@@ -37,7 +37,7 @@ def linear_regression(X, y):
     return reg
 
 
-def evaluate(training_data, test_data, reg_mod):
+def evaluate(training_data, test_data, reg_mod, degree=2):
     r2_train = reg_mod.score(*training_data)
     r2_test  = reg_mod.score(*test_data)
     print("R^2 training: %.5f" % reg_mod.score(*training_data))
@@ -48,7 +48,7 @@ def evaluate(training_data, test_data, reg_mod):
     print("RMS training: %.5f" % rms_train)
     print("RMS test:     %.5f" % rms_test)
 
-    print("Generated polynomial:\n\t %s" % generate_polynomial(reg_mod, 2))
+    print("Generated polynomial:\n\t %s" % generate_polynomial(reg_mod, degree))
 
 
 def regression(data_files, test_data_files=None, training_fraction=0.6, degree=2, limits=None):
@@ -78,7 +78,7 @@ def regression(data_files, test_data_files=None, training_fraction=0.6, degree=2
 
     reg_mod = linear_regression(*training_data)
 
-    evaluate(training_data, test_data, reg_mod)
+    evaluate(training_data, test_data, reg_mod, degree=degree)
     return dataset, (data, training_data, test_data, reg_mod)
 
 
@@ -124,7 +124,7 @@ def train_and_evaluate_single_file(data_file, training_fraction=0.6, degree=2, l
                                                             degree=degree,
                                                             limits=limits)
     reg_mod = linear_regression(*training_data)
-    evaluate(training_data, test_data, reg_mod)
+    evaluate(training_data, test_data, reg_mod, degree=degree)
     return data, training_data, test_data, reg_mod
 
 
@@ -167,7 +167,7 @@ def generate_polynomial(linear_model, degree, features=FEATURES):
 
 
 
-def filebased_cross_validation(data_files, test_data_files, degree=1,
+def filebased_cross_validation(data_files, test_data_files, degree=2,
         dual_model=False, limits=None):
 
     print("\nTraining on data_files %s " % ", ".join(data_files))
@@ -187,7 +187,7 @@ def filebased_cross_validation(data_files, test_data_files, degree=1,
         test_data = fetch_data(input_file, degree=degree,
                           dual_model=dual_model, limits=limits)
 
-        evaluate(data, test_data, reg_mod)
+        evaluate(data, test_data, reg_mod, degree=degree)
         r2_scores.append(reg_mod.score(*test_data))
 
     return r2_scores
