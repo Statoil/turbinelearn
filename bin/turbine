@@ -8,7 +8,20 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from turbinelearn import *
+try:
+    import sklearn
+    sklearn_version = map(int, sklearn.__version__.split('.'))
+    if sklearn_version[0] == 0 and sklearn_version[1] < 18:
+        exit('Too old sklearn, needs at least 0.18.2, was: %s' %
+             sklearn.__version__)
+except ImportError as err:
+    exit('Failed to import sklearn, have you install scikit learn?\n%s\n' % err)
+
+try:
+    from turbinelearn import *
+except ImportError as err:
+    exit('Failed to import turbinelearn\n%s' % err)
+
 
 LearningParameter = namedtuple('LearningParameter',
                                ['dataset', 'degree', 'training_fraction', 'k', 'clean', 'dual_model'])
