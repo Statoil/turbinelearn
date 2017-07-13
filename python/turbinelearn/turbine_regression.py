@@ -130,7 +130,7 @@ def train_and_evaluate_single_file(data_file, training_fraction=0.6, degree=2, l
 
 def individual_cross_validation(data_file, k=5, degree=2, limits=None):
     [data] = read_and_split_files(data_file, training_fraction=0, degree=degree, limits=limits)
-    #Split dataset into 5 consecutive folds (without shuffling by default).
+    # Split dataset into k consecutive folds (without shuffling).
     scores = cross_val_score(linear_model.LinearRegression(), *data, cv = k )
     print("Accuracy: %0.4f (+/- %0.4f)" % (scores.mean(), scores.std() * 2))
     print("Scores:   %s" % ", ".join(['%.4f' % s for s in scores]))
@@ -201,27 +201,4 @@ def file_cross_val(data_files, k=2, degree=2, dual_model=False, limits=None):
                                    limits=limits)
 
         test_data.append((training_set, test_set, r2_scores))
-
-    print("\n\n\n\n################ SUMMARY ###############")
-    print(" Cross validations performed: %d" % len(test_data))
-
-    test_data.sort(key=lambda result: result[2][0])
-    training_scores = zip(*(zip(*test_data)[2]))[0]
-
-    print("\n R^2 training score:")
-    print("\t- Average:\t%.6f" % np.average(training_scores))
-    print("\t- Mean:\t\t%.6f" % np.mean(training_scores))
-    print("\t- Worst:\t%.6f  (obtained when testing on: [%s])" %
-                            (training_scores[0], ", ".join(test_data[0][1])))
-
-    test_data.sort(key=lambda result: min(result[2][1:]))
-    test_scores = [result[1:] for result in zip(*test_data)[2]]
-    all_test_scores = reduce(lambda x,y: x+y, test_scores)
-
-    print("\n R^2 test score:")
-    print("\t- Average:\t%.6f" % np.average(all_test_scores))
-    print("\t- Mean:\t\t%.6f" % np.mean(all_test_scores))
-    print("\t- Worst:\t%r  (obtained when testing on: [%s])" %
-                            (test_scores[0], ", ".join(test_data[0][1])))
-
-    print("\n########################################")
+    return test_data
