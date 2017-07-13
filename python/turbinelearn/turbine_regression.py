@@ -180,17 +180,48 @@ def filebased_cross_validation(data_files, test_data_files, degree=1,
     else:
         reg_mod = linear_regression(*data)
 
+    r2_scores = [reg_mod.score(*data)]
+
     print("Testing on test_data_files %s" % ", ".join(test_data_files))
     for input_file in test_data_files:
         test_data = fetch_data(input_file, degree=degree,
                           dual_model=dual_model, limits=limits)
 
-        score = reg_mod.score(*test_data)
-
         evaluate(data, test_data, reg_mod)
+        r2_scores.append(reg_mod.score(*test_data))
+
+    return r2_scores
 
 def file_cross_val(data_files, k=2, degree=2, dual_model=False, limits=None):
+    test_data = []
+
     for training_set, test_set in enum_files(data_files, k):
-        filebased_cross_validation(training_set, test_set,
+        r2_scores = filebased_cross_validation(training_set, test_set,
                                    degree=degree, dual_model=dual_model,
                                    limits=limits)
+
+        test_data.append((training_set, test_set, r2_scores))
+
+    print("\n\n\n\n################ SUMMARY ###############")
+    print(" Cross validations performed: %d" % len(test_data))
+
+    test_data.sort(key=lambda result: result[2][0])
+    training_scores = zip(*(zip(*test_data)[2]))[0]
+
+    print("\n R^2 training score:")
+    print("\t- Average:\t%.6f" % np.average(training_scores))
+    print("\t- Mean:\t\t%.6f" % np.mean(training_scores))
+    print("\t- Worst:\t%.6f  (obtained when testing on: [%s])" %
+                            (training_scores[0], ", ".join(test_data[0][1])))
+
+    test_data.sort(key=lambda result: min(result[2][1:]))
+    test_scores = [result[1:] for result in zip(*test_data)[2]]
+    all_test_scores = reduce(lambda x,y: x+y, test_scores)
+
+    print("\n R^2 test score:")
+    print("\t- Average:\t%.6f" % np.average(all_test_scores))
+    print("\t- Mean:\t\t%.6f" % np.mean(all_test_scores))
+    print("\t- Worst:\t%r  (obtained when testing on: [%s])" %
+                            (test_scores[0], ", ".join(test_data[0][1])))
+
+    print("\n########################################")
