@@ -98,7 +98,7 @@ def method_fcv(params):
 def method_icv(params):
     for input_file in params.dataset:
         print("\nDoing individual cross validation for %s" % input_file)
-        individual_cross_validation(input_file, degree=params.degree, limits=get_limits(params))
+        individual_cross_validation(input_file, k=params.k, degree=params.degree, limits=get_limits(params))
 
 
 def method_simple(params):
