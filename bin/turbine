@@ -49,6 +49,9 @@ def create_argparse():
     parser.add_argument('--no-dual', dest='dual', action='store_false')
     parser.set_defaults(dual=False)
 
+    parser.add_argument('-v', '--version', dest='version', action='store_true',
+                        help='Prints version and exits.')
+
     return parser.parse_known_args()
 
 
@@ -185,6 +188,9 @@ if __name__ == "__main__":
     args, dataset = create_argparse()
     if args.dual and args.dataset in ['HG', 'HT']:
         exit('Cannot use both --dual and --dataset')
+    if args.version:
+        print('turbinelearn version %s' % TURBINELEARN_VERSION)
+        exit(0)
     dataset = filter_dataset(dataset, args.dataset)
     if not dataset:
         exit('Usage: turbine --method=pca data/LOCO*csv')
