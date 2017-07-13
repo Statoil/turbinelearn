@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from setuptools import setup
 import unittest
 
@@ -10,5 +12,6 @@ setup(
     name="turbinelearn",
     packages=["turbinelearn"],
     package_dir={"turbinelearn" : "python/turbinelearn"},
+    scripts=['./bin/turbine'],
     test_suite='setup.turbine_test_suite'
 )
