@@ -27,7 +27,7 @@ def detect_outliers(data):
 
 
 def polynomialize_data(data_sets, degree=2):
-    data_transformer = lambda X : PolynomialFeatures(degree=degree).fit_transform(X)
+    data_transformer = lambda X: PolynomialFeatures(degree=degree).fit_transform(X)
     return [(data_transformer(data[0]), data[1]) for data in data_sets]
 
 
@@ -51,7 +51,7 @@ def evaluate(training_data, test_data, reg_mod, degree=2):
     print("Generated polynomial:\n\t %s" % generate_polynomial(reg_mod, degree))
 
 
-def regression(data_files, test_data_files=None, training_fraction=0.6, degree=2, limits=None):
+def regression(data_files, test_data_files=None, training_fraction=0.6, degree=2, limits=None, normalize=()):
     dataset = None
     if test_data_files is None:
         data = load_data(data_files)
@@ -59,7 +59,7 @@ def regression(data_files, test_data_files=None, training_fraction=0.6, degree=2
         print(" >> Loaded %d data points" % N)
 
         dataset = data
-        data = preprocess_data(data, limits=limits)
+        data = preprocess_data(data, limits=limits, normalize=normalize)
         print(" >> Using  %d / %d data points after preprocessing (deleted %d points)" %
               (len(data), N, N-len(data)))
 
@@ -82,11 +82,11 @@ def regression(data_files, test_data_files=None, training_fraction=0.6, degree=2
     return dataset, (data, training_data, test_data, reg_mod)
 
 
-def read_and_split_files(data_files, training_fraction=0.6, degree=2, limits=None):
+def read_and_split_files(data_files, training_fraction=0.6, degree=2, limits=None, normalize=()):
     data = load_data(data_files)
     print(" >> Loaded %d data points" % len(data))
 
-    data = preprocess_data(data, limits=limits)
+    data = preprocess_data(data, limits=limits, normalize=normalize)
     print(" >> After preprocessing %d data points remaining" % len(data))
     if training_fraction > 0:
         data, training_data, test_data = split_data_set(data, training_fraction=training_fraction)
@@ -97,15 +97,15 @@ def read_and_split_files(data_files, training_fraction=0.6, degree=2, limits=Non
     else:
         X = data[FEATURES]
         y = data[TARGET]
-        data=(X,y)
+        data = (X, y)
         return polynomialize_data([data], degree=degree)
 
-def fetch_data(data_files, degree=1, dual_model=False, limits=None):
+def fetch_data(data_files, degree=1, dual_model=False, limits=None, normalize=()):
     data = load_data(data_files)
     print(" >> Loaded %d data points" % len(data))
 
     load_features = FEATURES+["TURBINE_TYPE"]
-    data = preprocess_data(data, features=load_features, limits=limits)
+    data = preprocess_data(data, features=load_features, limits=limits, normalize=normalize)
     print(" >> After preprocessing %d data points remaining" % len(data))
 
     X, y = data[FEATURES], data[TARGET]
@@ -118,27 +118,36 @@ def fetch_data(data_files, degree=1, dual_model=False, limits=None):
 
     return (X, y)
 
-def train_and_evaluate_single_file(data_file, training_fraction=0.6, degree=2, limits=None):
+def train_and_evaluate_single_file(data_file,
+                                   training_fraction=0.6,
+                                   degree=2,
+                                   limits=None,
+                                   normalize=()):
     [data, training_data, test_data] = read_and_split_files(data_file,
                                                             training_fraction=training_fraction,
                                                             degree=degree,
-                                                            limits=limits)
+                                                            limits=limits,
+                                                            normalize=normalize)
     reg_mod = linear_regression(*training_data)
     evaluate(training_data, test_data, reg_mod, degree=degree)
     return data, training_data, test_data, reg_mod
 
 
-def individual_cross_validation(data_file, k=5, degree=2, limits=None):
-    [data] = read_and_split_files(data_file, training_fraction=0, degree=degree, limits=limits)
+def individual_cross_validation(data_file,
+                                k=5,
+                                degree=2,
+                                limits=None,
+                                normalize=()):
+    [data] = read_and_split_files(data_file, training_fraction=0, degree=degree, limits=limits, normalize=normalize)
     # Split dataset into k consecutive folds (without shuffling).
-    scores = cross_val_score(linear_model.LinearRegression(), *data, cv = k )
+    scores = cross_val_score(linear_model.LinearRegression(), *data, cv=k)
     print("Accuracy: %0.4f (+/- %0.4f)" % (scores.mean(), scores.std() * 2))
     print("Scores:   %s" % ", ".join(['%.4f' % s for s in scores]))
 
 
-def pca(data_file, limits=None):
+def pca(data_file, limits=None, normalize=()):
     data = load_data(data_file)
-    data = preprocess_data(data, limits=limits)
+    data = preprocess_data(data, limits=limits, normalize=normalize)
     X = data[FEATURES + [TARGET]]
     y = data[TARGET]
     pca = PCA(n_components=2)
@@ -167,13 +176,17 @@ def generate_polynomial(linear_model, degree, features=FEATURES):
 
 
 
-def filebased_cross_validation(data_files, test_data_files, degree=2,
-        dual_model=False, limits=None):
+def filebased_cross_validation(data_files,
+                               test_data_files,
+                               degree=2,
+                               dual_model=False,
+                               limits=None,
+                               normalize=()):
 
     print("\nTraining on data_files %s " % ", ".join(data_files))
 
     data = fetch_data(data_files, degree=degree,
-                      dual_model=dual_model, limits=limits)
+                      dual_model=dual_model, limits=limits, normalize=normalize)
 
     if dual_model:
         reg_mod = DualLinearModel.dual_regression(*data)
@@ -185,20 +198,25 @@ def filebased_cross_validation(data_files, test_data_files, degree=2,
     print("Testing on test_data_files %s" % ", ".join(test_data_files))
     for input_file in test_data_files:
         test_data = fetch_data(input_file, degree=degree,
-                          dual_model=dual_model, limits=limits)
+                               dual_model=dual_model, limits=limits, normalize=())
 
         evaluate(data, test_data, reg_mod, degree=degree)
         r2_scores.append(reg_mod.score(*test_data))
 
     return r2_scores
 
-def file_cross_val(data_files, k=2, degree=2, dual_model=False, limits=None):
+def file_cross_val(data_files,
+                   k=2,
+                   degree=2,
+                   dual_model=False,
+                   limits=None,
+                   normalize=()):
     test_data = []
 
     for training_set, test_set in enum_files(data_files, k):
         r2_scores = filebased_cross_validation(training_set, test_set,
-                                   degree=degree, dual_model=dual_model,
-                                   limits=limits)
+                                               degree=degree, dual_model=dual_model,
+                                               limits=limits, normalize=normalize)
 
         test_data.append((training_set, test_set, r2_scores))
     return test_data
