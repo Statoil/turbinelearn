@@ -53,7 +53,7 @@ def normalize_column(data, field):
     data[field] /= dif_
 
 
-def preprocess_data(data, features=FEATURES, target=TARGET, normalize=(), limits={}):
+def preprocess_data(data, features=FEATURES, target=TARGET, limits={}, normalize=()):
     if limits is None:
         limits = {}
     for key in limits:
