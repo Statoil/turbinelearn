@@ -37,7 +37,7 @@ def linear_regression(X, y):
     return reg
 
 
-def evaluate(data, training_data, test_data, reg_mod):
+def evaluate(training_data, test_data, reg_mod):
     r2_train = reg_mod.score(*training_data)
     r2_test  = reg_mod.score(*test_data)
     print("R^2 training: %.5f" % reg_mod.score(*training_data))
@@ -48,7 +48,7 @@ def evaluate(data, training_data, test_data, reg_mod):
     print("RMS training: %.5f" % rms_train)
     print("RMS test:     %.5f" % rms_test)
 
-    print("Generated polynomial:\n\t %s" % generate_polynomial(reg_mod,2))
+    print("Generated polynomial:\n\t %s" % generate_polynomial(reg_mod, 2))
 
 
 def regression(data_files, test_data_files=None, training_fraction=0.6, degree=2, limits=None):
@@ -78,7 +78,7 @@ def regression(data_files, test_data_files=None, training_fraction=0.6, degree=2
 
     reg_mod = linear_regression(*training_data)
 
-    evaluate(data, training_data, test_data, reg_mod)
+    evaluate(training_data, test_data, reg_mod)
     return dataset, (data, training_data, test_data, reg_mod)
 
 
@@ -124,7 +124,7 @@ def train_and_evaluate_single_file(data_file, training_fraction=0.6, degree=2, l
                                                             degree=degree,
                                                             limits=limits)
     reg_mod = linear_regression(*training_data)
-    evaluate(data, training_data, test_data, reg_mod)
+    evaluate(training_data, test_data, reg_mod)
     return data, training_data, test_data, reg_mod
 
 
@@ -182,12 +182,12 @@ def filebased_cross_validation(data_files, test_data_files, degree=1,
 
     print("Testing on test_data_files %s" % ", ".join(test_data_files))
     for input_file in test_data_files:
-        data = fetch_data(test_data_files, degree=degree,
+        test_data = fetch_data(input_file, degree=degree,
                           dual_model=dual_model, limits=limits)
 
-        score = reg_mod.score(*data)
-        print("Score on %s is %.4f" % (input_file, score))
+        score = reg_mod.score(*test_data)
 
+        evaluate(data, test_data, reg_mod)
 
 def file_cross_val(data_files, k=2, degree=2, dual_model=False, limits=None):
     for training_set, test_set in enum_files(data_files, k):
