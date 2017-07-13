@@ -9,7 +9,8 @@ import seaborn as sns
 
 from turbinelearn import *
 
-LearningParameter = namedtuple('LearningParameter', ['dataset', 'degree', 'training_fraction', 'k', 'clean', 'dual_model'])
+LearningParameter = namedtuple('LearningParameter',
+                               ['dataset', 'degree', 'training_fraction', 'k', 'clean', 'dual_model'])
 
 
 def visualize(data, training_data, test_data, reg_mod):
