@@ -23,13 +23,13 @@ class TestLearning(TestCase):
 
             reg = linear_model.LinearRegression()
             reg = reg.fit(Xi, yi)
-            
+
             sub_models.append(reg)
             X.append(Xi)
 
         return sub_models, X
 
-    
+
     def build_dual_model(self, data):
         extended_features = tblearn.FEATURES+["TURBINE_TYPE"]
         data = tblearn.preprocess_data(data, features=extended_features)

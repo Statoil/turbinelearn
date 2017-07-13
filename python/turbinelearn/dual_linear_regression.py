@@ -20,7 +20,7 @@ class DualLinearModel:
     def format(cls, X, split_feature):
         """
         Formats the data according to a specified partition.
-        
+
         @data the data to be formatted
         @split_feature gives a partition of the data
 
@@ -31,7 +31,7 @@ class DualLinearModel:
         operations.
         """
 
-        X_split = np.transpose(np.transpose(X) * split_feature)
+        X_split = (X.T * split_feature).T
         sf_column = np.asmatrix(split_feature).T
 
         return np.concatenate((X, X_split, sf_column), axis=1)
@@ -55,7 +55,7 @@ class DualLinearModel:
                     "Expected the elements of X to have odd length, was %d" %
                     len(X[0])
                     )
-        
+
         num_orig_features = X.shape[1]//2
 
         reg_mod = []
