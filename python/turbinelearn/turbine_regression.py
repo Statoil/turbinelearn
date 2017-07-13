@@ -37,7 +37,7 @@ def linear_regression(X, y):
     return reg
 
 
-def evaluate(training_data, test_data, reg_mod):
+def evaluate(training_data, test_data, reg_mod, degree=2):
     r2_train = reg_mod.score(*training_data)
     r2_test  = reg_mod.score(*test_data)
     print("R^2 training: %.5f" % reg_mod.score(*training_data))
@@ -48,7 +48,7 @@ def evaluate(training_data, test_data, reg_mod):
     print("RMS training: %.5f" % rms_train)
     print("RMS test:     %.5f" % rms_test)
 
-    print("Generated polynomial:\n\t %s" % generate_polynomial(reg_mod, 2))
+    print("Generated polynomial:\n\t %s" % generate_polynomial(reg_mod, degree))
 
 
 def regression(data_files, test_data_files=None, training_fraction=0.6, degree=2, limits=None):
@@ -78,7 +78,7 @@ def regression(data_files, test_data_files=None, training_fraction=0.6, degree=2
 
     reg_mod = linear_regression(*training_data)
 
-    evaluate(training_data, test_data, reg_mod)
+    evaluate(training_data, test_data, reg_mod, degree=degree)
     return dataset, (data, training_data, test_data, reg_mod)
 
 
@@ -124,13 +124,13 @@ def train_and_evaluate_single_file(data_file, training_fraction=0.6, degree=2, l
                                                             degree=degree,
                                                             limits=limits)
     reg_mod = linear_regression(*training_data)
-    evaluate(training_data, test_data, reg_mod)
+    evaluate(training_data, test_data, reg_mod, degree=degree)
     return data, training_data, test_data, reg_mod
 
 
 def individual_cross_validation(data_file, k=5, degree=2, limits=None):
     [data] = read_and_split_files(data_file, training_fraction=0, degree=degree, limits=limits)
-    #Split dataset into 5 consecutive folds (without shuffling by default).
+    # Split dataset into k consecutive folds (without shuffling).
     scores = cross_val_score(linear_model.LinearRegression(), *data, cv = k )
     print("Accuracy: %0.4f (+/- %0.4f)" % (scores.mean(), scores.std() * 2))
     print("Scores:   %s" % ", ".join(['%.4f' % s for s in scores]))
@@ -167,7 +167,7 @@ def generate_polynomial(linear_model, degree, features=FEATURES):
 
 
 
-def filebased_cross_validation(data_files, test_data_files, degree=1,
+def filebased_cross_validation(data_files, test_data_files, degree=2,
         dual_model=False, limits=None):
 
     print("\nTraining on data_files %s " % ", ".join(data_files))
@@ -187,7 +187,7 @@ def filebased_cross_validation(data_files, test_data_files, degree=1,
         test_data = fetch_data(input_file, degree=degree,
                           dual_model=dual_model, limits=limits)
 
-        evaluate(data, test_data, reg_mod)
+        evaluate(data, test_data, reg_mod, degree=degree)
         r2_scores.append(reg_mod.score(*test_data))
 
     return r2_scores
@@ -201,27 +201,4 @@ def file_cross_val(data_files, k=2, degree=2, dual_model=False, limits=None):
                                    limits=limits)
 
         test_data.append((training_set, test_set, r2_scores))
-
-    print("\n\n\n\n################ SUMMARY ###############")
-    print(" Cross validations performed: %d" % len(test_data))
-
-    test_data.sort(key=lambda result: result[2][0])
-    training_scores = zip(*(zip(*test_data)[2]))[0]
-
-    print("\n R^2 training score:")
-    print("\t- Average:\t%.6f" % np.average(training_scores))
-    print("\t- Mean:\t\t%.6f" % np.mean(training_scores))
-    print("\t- Worst:\t%.6f  (obtained when testing on: [%s])" %
-                            (training_scores[0], ", ".join(test_data[0][1])))
-
-    test_data.sort(key=lambda result: min(result[2][1:]))
-    test_scores = [result[1:] for result in zip(*test_data)[2]]
-    all_test_scores = reduce(lambda x,y: x+y, test_scores)
-
-    print("\n R^2 test score:")
-    print("\t- Average:\t%.6f" % np.average(all_test_scores))
-    print("\t- Mean:\t\t%.6f" % np.mean(all_test_scores))
-    print("\t- Worst:\t%r  (obtained when testing on: [%s])" %
-                            (test_scores[0], ", ".join(test_data[0][1])))
-
-    print("\n########################################")
+    return test_data

@@ -3,7 +3,7 @@ from __future__ import print_function, absolute_import, division
 from os.path import split as path_split
 from collections import namedtuple
 import argparse
-
+import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -27,9 +27,9 @@ def visualize(data, training_data, test_data, reg_mod):
 
 def create_argparse():
     parser = argparse.ArgumentParser(description='Learns a polynomial.')
-    parser.add_argument('--method', dest='method',choices=['fcv', 'icv', 'simple', 'pca', 'reg'], required=True,
+    parser.add_argument('-m', '--method', dest='method',choices=['fcv', 'icv', 'simple', 'pca', 'reg'], required=True,
                         help='Uses either filebased cross validation (fcv), individual file cross validation (icv), run a single train-test run on each file (simple) or do PCA (pca)')
-    parser.add_argument('--degree', dest='degree',type=int, choices=range(1, 10), default=2,
+    parser.add_argument('-d', '--degree', dest='degree',type=int, choices=range(1, 10), default=2,
                         help='The degree of the polynomial to train, defaults to 2')
 
     parser.add_argument('--clean', dest='clean', action='store_true',
@@ -37,14 +37,18 @@ def create_argparse():
     parser.add_argument('--no-clean', dest='clean', action='store_false')
     parser.set_defaults(clean=True)
 
-    parser.add_argument('--training-fraction', dest='training_fraction',type=float, default=0.6,
-                        help='The fraction of data to use as training data, only useed when method=simple')
-    parser.add_argument('--k', dest='k',type=int, choices=range(1, 10), default=2,
+    parser.add_argument('-t', '--training-fraction', dest='training_fraction',type=float, default=0.6,
+                        help='The fraction of data to use as training data, only used when method=simple')
+    parser.add_argument('-k', '--k', dest='k',type=int, choices=range(1, 10), default=2,
                         help='The number of folds to keep out when using cross validation. For method=fcv it is the number of files to keep out')
     parser.add_argument('--dataset', dest='dataset', choices=['HG','HT','all'], default='all',
                         help='The dataset to use, HG, HT, or all.')
-    parser.add_argument('--dual_model', dest='dual_model', choices=["on", "off"], default='off',
-                        help='Will build separate models for HG and HT before combining them')
+
+    parser.add_argument('--dual', dest='dual', action='store_true',
+                        help='Will build separate models for HG and HT before combining them, defaults to --no-dual')
+    parser.add_argument('--no-dual', dest='dual', action='store_false')
+    parser.set_defaults(dual=False)
+
     return parser.parse_known_args()
 
 
@@ -53,7 +57,38 @@ def get_limits(params):
 
 
 def method_fcv(params):
-    file_cross_val(params.dataset, k=params.k, degree=params.degree, limits=get_limits(params), dual_model=params.dual_model)
+    test_data = file_cross_val(params.dataset,
+                               k=params.k,
+                               degree=params.degree,
+                               limits=get_limits(params),
+                               dual_model=params.dual_model)
+
+    print("\n\n\n\n################ SUMMARY ###############")
+    print(" Cross validations performed: %d" % len(test_data))
+
+    test_data.sort(key=lambda result: result[2][0])
+    training_scores = zip(*(zip(*test_data)[2]))[0]
+
+    print("\n R^2 training score:")
+    print("\t- Average: \t%.6f" % np.average(training_scores))
+    print("\t- Median:  \t%.6f" % np.median(training_scores))
+    print("\t- Std dev: \t%.6f" % np.std(training_scores))
+    print("\t- Worst:   \t%.6f  (obtained when testing on: [%s])" %
+                                (training_scores[0], ", ".join(test_data[0][1])))
+
+    test_data.sort(key=lambda result: min(result[2][1:]))
+    test_scores = [result[1:] for result in zip(*test_data)[2]]
+    all_test_scores = reduce(lambda x,y: x+y, test_scores)
+
+    print("\n R^2 test score:")
+    print("\t- Average: \t%.6f" % np.average(all_test_scores))
+    print("\t- Median:  \t%.6f" % np.median(all_test_scores))
+    print("\t- Std dev: \t%.6f" % np.std(all_test_scores))
+    print("\t- Worst:   \t%r  (obtained when testing on: [%s])" %
+                              (test_scores[0], ", ".join(test_data[0][1])))
+
+    print("\n########################################")
+
 
 
 def method_icv(params):
@@ -127,7 +162,7 @@ def main(args, dataset):
                                training_fraction=args.training_fraction,
                                k=args.k,
                                clean=args.clean,
-                               dual_model=args.dual_model=="on")
+                               dual_model=args.dual=="on")
     methods = {
         'fcv'    : method_fcv,
         'icv'    : method_icv,
@@ -148,6 +183,8 @@ def filter_dataset(dataset, filter):
 
 if __name__ == "__main__":
     args, dataset = create_argparse()
+    if args.dual and args.dataset in ['HG', 'HT']:
+        exit('Cannot use both --dual and --dataset')
     dataset = filter_dataset(dataset, args.dataset)
     if not dataset:
         exit('Usage: turbine --method=pca data/LOCO*csv')
