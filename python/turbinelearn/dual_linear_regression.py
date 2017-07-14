@@ -1,4 +1,7 @@
 import numpy as np
+
+from pandas import DataFrame
+
 from sklearn import linear_model
 
 class DualLinearModel:
@@ -21,20 +24,25 @@ class DualLinearModel:
         """
         Formats the data according to a specified partition.
 
-        @data the data to be formatted
-        @split_feature gives a partition of the data
+        @data the data to be formatted as a pandas.DataFrame
+        @split_feature gives a partition of the data as a pandas.Series
 
-        split_feature is assumed to be an array consisting of 0 and 1 and
-        should be of the same length as the columns of data.
-
-        Both split_feature and data is assumed to support standard numpy
-        operations.
+        split_feature is assumed to consist of 0 and 1 and should be of the
+        same length as data.
         """
 
-        X_split = (X.T * split_feature).T
-        sf_column = np.asmatrix(split_feature).T
+        Xm, sfm = np.asarray(X), np.asarray(split_feature)
 
-        return np.concatenate((X, X_split, sf_column), axis=1)
+        X_split = (Xm.T * sfm).T
+        sf_column = np.asmatrix(sfm).T
+        data = np.concatenate((X, X_split, sf_column), axis=1)
+
+
+        feature_names = list(X.columns.values)
+        feature_names += [split_feature.name + "*" + name for name in feature_names]
+        feature_names += [split_feature.name]
+
+        return DataFrame(data=data, index=X.index, columns=feature_names)
 
     @classmethod
     def dual_regression(cls, X, y):
@@ -50,19 +58,24 @@ class DualLinearModel:
         and 1 and At is the elementwise product of A and t.
         """
 
-        if len(X[0])%2 == 0:
+        if len(X.columns)%2 == 0:
             raise ValueError(
-                    "Expected the elements of X to have odd length, was %d" %
-                    len(X[0])
+                    "Expected X to have an odd number of columns, was %d" %
+                    len(X.columns)
                     )
 
-        num_orig_features = X.shape[1]//2
+        split_feature_name = X.columns.values[-1]
+        split_feature_range = [0, 1]
+
+        num_orig_features = len(X.columns)//2
+        orig_features = X.columns.values[:num_orig_features]
 
         reg_mod = []
-        for split_feature in range(2):
-            row_filter = np.array((X[:,-1]==split_feature)).flatten()
-            Xi = X[row_filter,:][:,range(num_orig_features)]
-            yi = y[row_filter]
+        for split_feature_value in split_feature_range:
+            split_filter = (X[split_feature_name] == split_feature_value)
+            Xi = X[split_filter][orig_features]
+            yi = y[split_filter]
+
             regi = linear_model.LinearRegression()
             regi = regi.fit(Xi, yi)
 
