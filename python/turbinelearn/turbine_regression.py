@@ -31,7 +31,9 @@ def detect_outliers(data):
 def polynomialize_data(X, degree=2):
     poly_factory = PolynomialFeatures(degree=degree, include_bias=False)
     poly_X = poly_factory.fit_transform(X)
+
     feature_names = poly_factory.get_feature_names(list(X))
+    feature_names = [name.replace(" ", "*") for name in feature_names]
 
     return DataFrame(data=poly_X, index=X.index, columns=feature_names)
 
@@ -111,10 +113,10 @@ def fetch_data(data_files, degree=1, dual_model=False, limits=None, normalize=()
     X, y = data[FEATURES], data[TARGET]
 
     if degree > 1:
-        X = PolynomialFeatures(degree=degree, include_bias=False).fit_transform(X)
+        X = polynomialize_data(X, degree=degree)
 
     if dual_model:
-        X = DualLinearModel.format(X, np.array(data["TURBINE_TYPE"]))
+        X = DualLinearModel.format(X, data["TURBINE_TYPE"])
 
     return (X, y)
 
@@ -167,10 +169,9 @@ def generate_polynomial(linear_model, features):
     polypoly = float_fmt % (linear_model.coef_[0] + linear_model.intercept_)
     for variable, coef in zip(features, linear_model.coef_):
         polypoly += "\n\t+ " if coef >= 0 else "\n\t- "
-        polypoly += float_fmt % coef + "*" + variable
+        polypoly += float_fmt % abs(coef) + "*" + variable
 
     return polypoly
-
 
 
 def filebased_cross_validation(data_files,

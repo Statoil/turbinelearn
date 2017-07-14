@@ -1,6 +1,9 @@
 from unittest import TestCase
 
 import numpy as np
+
+from pandas import Series
+
 from sklearn import linear_model
 
 from turbinelearn import DualLinearModel
@@ -32,11 +35,14 @@ class TestLearning(TestCase):
 
     def build_dual_model(self, data):
         extended_features = tblearn.FEATURES+["TURBINE_TYPE"]
-        data = tblearn.preprocess_data(data, features=extended_features)
+        data = tblearn.preprocess_data(
+                                       data,
+                                       features=extended_features
+                                       )
 
         turbine_type = data["TURBINE_TYPE"]
         X, y = data[tblearn.FEATURES], data[tblearn.TARGET]
-        dual_X = DualLinearModel.format(X, np.array(turbine_type))
+        dual_X = DualLinearModel.format(X, turbine_type)
 
         return DualLinearModel.dual_regression(dual_X, y)
 
@@ -56,7 +62,12 @@ class TestLearning(TestCase):
         dual_model = self.build_dual_model(data)
 
         for i in range(2):
-            dual_Xi = DualLinearModel.format(sub_X[i], np.zeros(len(sub_X[i]))+i)
+            split_feature = Series(
+                                data=np.zeros(len(sub_X[i]))+i,
+                                name="TURBINE_TYPE"
+                                )
+
+            dual_Xi = DualLinearModel.format(sub_X[i], split_feature)
 
             sub_pred = sub_models[i].predict(sub_X[i])
             dual_pred = dual_model.predict(dual_Xi)
