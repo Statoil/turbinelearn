@@ -77,12 +77,12 @@ def extract_data_set(data, features=FEATURES, target=TARGET):
 
 
 def split_data_set(data, training_fraction=0.6):
-    split_index = int(len(data)*training_fraction)
-
-    if split_index >= len(data):
-        return [[]] * 3
-
     X, y = data[0], data[1]
+
+    split_index = int(len(X)*training_fraction)
+
+    if split_index >= len(X):
+        return [[]] * 3
 
     training_data = (X.iloc[:split_index:], y.iloc[:split_index:])
     test_data = (X.iloc[split_index::], y.iloc[split_index::])
