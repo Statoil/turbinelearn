@@ -170,7 +170,14 @@ def _plot_reg(params, data, i):
     p_dpres, = plt.plot(data['TIME'],
                         data['DISCHARGE_PRES'] * 1000,
                         'o', markersize=2, label='DISCHARGE_PRES')
-    plt.legend(handles=[p_speed, p_dtemp, p_dpres])
+    p_atemp, = plt.plot(data['TIME'],
+                        data['AIR_IN_TEMP'] * 10 * 100,
+                        'o', markersize=2, label='AIR_IN_TEMP')
+    p_apres, = plt.plot(data['TIME'],
+                        data['AIR_IN_PRES'] * 1000 * 10,
+                        'o', markersize=2, label='AIR_IN_PRES')
+    plt.legend(handles=[p_speed, p_dtemp, p_dpres,
+                        p_atemp, p_apres])
 
 
 def method_reg(params):
