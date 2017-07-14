@@ -13,7 +13,7 @@ from itertools import combinations_with_replacement
 
 from .turbine_file import (enum_files, load_single_file, load_data,
                            normalize_column, preprocess_data, split_data_set,
-                           FEATURES, TARGET)
+                           extract_data_set, FEATURES, TARGET)
 
 from .dual_linear_regression import DualLinearModel
 
@@ -63,6 +63,7 @@ def regression(data_files, test_data_files=None, training_fraction=0.6, degree=2
         print(" >> Using  %d / %d data points after preprocessing (deleted %d points)" %
               (len(data), N, N-len(data)))
 
+        data = extract_data_set(data)
         data, training_data, test_data = split_data_set(data,
                                                         training_fraction=training_fraction)
 
@@ -89,15 +90,16 @@ def read_and_split_files(data_files, training_fraction=0.6, degree=2, limits=Non
     data = preprocess_data(data, limits=limits, normalize=normalize)
     print(" >> After preprocessing %d data points remaining" % len(data))
     if training_fraction > 0:
+        data = extract_data_set(data)
         data, training_data, test_data = split_data_set(data, training_fraction=training_fraction)
+
         if not (data and training_data and test_data):
             print(" >> Did not have enough data to do regression")
             return
+
         return polynomialize_data([data, training_data, test_data], degree=degree)
     else:
-        X = data[FEATURES]
-        y = data[TARGET]
-        data = (X, y)
+        data = extract_data_set(data)
         return polynomialize_data([data], degree=degree)
 
 def fetch_data(data_files, degree=1, dual_model=False, limits=None, normalize=()):
