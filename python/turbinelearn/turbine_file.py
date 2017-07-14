@@ -13,7 +13,7 @@ LIMITS =   {'SPEED'          : (5000, 10000),
             'AIR_IN_PRES'    : (0.8, 1.1),
             'DISCHARGE_TEMP' : (0, 600),
             'DISCHARGE_PRES' : (5, 20),
-            'TIME':            (dt(2016,02,01), dt(2100,1,1))  # 2016-01 seems to be broken
+            'TIME':            (dt(2016,01,21), dt(2100,1,1))  # [2016-01-01, 2016-01-21]  seems to be broken
 }
 
 FEATURE_MAP = {
@@ -76,10 +76,13 @@ def preprocess_data(data, features=FEATURES, target=TARGET, limits={}, normalize
 
     for field in normalize:
         normalize_column(data, field)
+    data = data.sort_values('TIME')
     data = data.set_index("TIME")
     if 'TIME' in limits:
         min_, max_ = limits['TIME']
-        data = data.ix[min_:max_]
+        start = data.index.searchsorted(min_)
+        end   = data.index.searchsorted(max_)
+        data  = data.ix[start:end]
     return data
 
 
