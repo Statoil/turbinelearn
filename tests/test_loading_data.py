@@ -1,12 +1,15 @@
 import os
 from datetime import datetime as dt
 from unittest import TestCase
+
 import turbinelearn as tblearn
+from datasets import relpath
 
 class TestLoadingData(TestCase):
 
     def setUp(self):
-        self.data = tblearn.load_data('old_data/turbin_data.csv')
+        fname = relpath('old_data', 'turbin_data.csv')
+        self.data = tblearn.load_data(fname)
 
     def test_load(self):
         self.assertEqual(2922, len(self.data))
