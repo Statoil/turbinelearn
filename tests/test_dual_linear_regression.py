@@ -1,19 +1,17 @@
 from unittest import TestCase
-
 import numpy as np
-
 from pandas import Series
-
 from sklearn import linear_model
 
 from turbinelearn import DualLinearModel
 import turbinelearn as tblearn
+from datasets import relpath
 
 class TestLearning(TestCase):
 
     def setUp(self):
-        self.fnames = ['data/LOCO_B_HTA.csv',
-                       'data/LOCO_B_HGA.csv']
+        self.fnames = [relpath('data', 'LOCO_B_HTA.csv'),
+                       relpath('data', 'LOCO_B_HGA.csv')]
 
 
     def build_sub_models(self, data):

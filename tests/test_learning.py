@@ -1,15 +1,19 @@
 import os
 import itertools
-
 from unittest import TestCase
 
 import turbinelearn as tblearn
+from datasets import relpath
 
 class TestLearning(TestCase):
 
     def setUp(self):
-        self.fname = 'old_data/turbin_data.csv'
+        self.fname = relpath('old_data', 'turbin_data.csv')
         self.data = tblearn.load_data(self.fname)
+        self.data_files = map(relpath, [
+            'data/LOCO_B_HGA.csv', 'data/LOCO_B_HGB.csv',
+            'data/LOCO_B_HTA.csv', 'data/LOCO_B_HTB.csv',
+        ])
 
     def preprocess(self):
         self.data = tblearn.preprocess_data(self.data)
@@ -47,15 +51,11 @@ class TestLearning(TestCase):
 
     def test_fcv(self):
         quality_threshold = 0.1
-        data_files = [
-                      "data/LOCO_B_HGA.csv", "data/LOCO_B_HGB.csv",
-                      "data/LOCO_B_HTA.csv", "data/LOCO_B_HTB.csv",
-                      ]
 
         scenarios = itertools.product([False, True], [1], [2,3])
         for dual_model, k, degree in scenarios:
             test_data = tblearn.file_cross_val(
-                                        data_files,
+                                        self.data_files,
                                         k=k,
                                         degree=degree,
                                         dual_model=dual_model,
