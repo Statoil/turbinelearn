@@ -3,11 +3,12 @@ from __future__ import print_function, absolute_import, division
 import math
 from os.path import split as path_split
 from collections import namedtuple
+import logging
 import argparse
+
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-
 try:
     import sklearn
     sklearn_version = map(int, sklearn.__version__.split('.'))
@@ -79,6 +80,14 @@ def create_argparse():
     parser.add_argument('-v', '--version', dest='version', action='store_true',
                         help='Prints version and exits.')
 
+    parser.add_argument('--debug',
+                        help="Print only debugging statements",
+                        action="store_const", dest="loglevel", const=logging.DEBUG,
+                        default=logging.WARNING)
+    parser.add_argument('--verbose',
+                        help="Massive amount of outputs",
+                        action="store_const", dest="loglevel", const=logging.INFO)
+
     return parser.parse_known_args()
 
 
@@ -97,8 +106,8 @@ def method_fcv(params):
                                normalize=get_normalize(params),
                                dual_model=params.dual_model)
 
-    print("\n\n\n\n################ SUMMARY ###############")
-    print(" Cross validations performed: %d" % len(test_data))
+    logging.info("\n\n\n\n################ SUMMARY ###############")
+    logging.info(" Cross validations performed: %d" % len(test_data))
 
     test_data.sort(key=lambda result: result[2][0])
     training_scores = zip(*(zip(*test_data)[2]))[0]
@@ -127,7 +136,7 @@ def method_fcv(params):
 
 def method_icv(params):
     for input_file in params.dataset:
-        print("\nDoing individual cross validation for %s" % input_file)
+        logging.info("\nDoing individual cross validation for %s" % input_file)
         individual_cross_validation(input_file,
                                     k=params.k,
                                     degree=params.degree,
@@ -137,12 +146,16 @@ def method_icv(params):
 
 def method_simple(params):
     for input_file in params.dataset:
-        print("\nDoing regression for %s" % input_file)
-        full_model= train_and_evaluate_single_file(input_file,
-                                                   training_fraction=params.training_fraction,
-                                                   degree=params.degree,
-                                                   limits=get_limits(params),
-                                                   normalize=get_normalize(params))
+        logging.info("\nDoing regression for %s" % input_file)
+        try:
+            full_model= train_and_evaluate_single_file(input_file,
+                                                       training_fraction=params.training_fraction,
+                                                       degree=params.degree,
+                                                       limits=get_limits(params),
+                                                       normalize=get_normalize(params))
+        except ValueError as err:
+            logging.ERROR('Could not train on file %s: %s' % (input_file, err))
+            return
         visualize(*full_model)
 
 
@@ -195,14 +208,15 @@ def method_reg(params):
         fname = path_split(input_file)
         plt.subplot(len(params.dataset), 2, (2*i)+1)
         plt.ylabel(fname[1])
-        print("\nDoing regression for %s" % input_file)
-        data, full_model = regression(input_file,
-                                      training_fraction=params.training_fraction,
-                                      degree=params.degree,
-                                      limits=get_limits(params),
-                                      normalize=get_normalize(params))
+        logging.info("\nDoing regression for %s" % input_file)
+        data, full_model, reg_res = regression(input_file,
+                                               training_fraction=params.training_fraction,
+                                               degree=params.degree,
+                                               limits=get_limits(params),
+                                               normalize=get_normalize(params))
         visualize(*full_model)
         _plot_reg(params, data, i)
+        # The generated polynomial is in reg_res.gen_pol
     plt.show()
 
 
@@ -215,22 +229,22 @@ def method_progress(params):
         input_file = dataset[i]
         fname = path_split(input_file)
         plt.ylabel(fname[1])
-        print("\nDoing regression for %s" % input_file)
+        logging.info("\nDoing regression for %s" % input_file)
         progress = compute_learning_progress(input_file,
                                              steps=params.k,
                                              degree=params.degree,
                                              limits=get_limits(params),
                                              normalize=get_normalize(params))
-    r2train  = [x[0] for x in progress]
-    r2test   = [x[1] for x in progress]
-    rmstrain = [x[2] for x in progress]
-    rmstest  = [x[3] for x in progress]
+    r2train  = [x.r2_train for x in progress]
+    r2test   = [x.r2_tes for x in progress]
+    rmstrain = [x.rms_train for x in progress]
+    rmstest  = [x.rms_test for x in progress]
 
     pp = lambda lst: " ".join(map(lambda x: "%.3f" % x, lst))
-    print('R^2 train:  %s' % pp(r2train))
-    print('R^2 test:   %s' % pp(r2test))
-    print('RMS train:  %s' % pp(rmstrain))
-    print('RMS test:   %s' % pp(rmstest))
+    logging.info('R^2 train:  %s' % pp(r2train))
+    logging.info('R^2 test:   %s' % pp(r2test))
+    logging.info('RMS train:  %s' % pp(rmstrain))
+    logging.info('RMS test:   %s' % pp(rmstest))
 
     plt.subplot(2, 1, 1)
     plt.ylabel('R^2')
@@ -269,16 +283,16 @@ def main(args, dataset):
 
 
 def print_params(args, dataset):
-    print('\nSettings:')
-    print('\tDataset:     %s' % dataset)
-    print('\tMethod:      %s' % args.method)
-    print('\tdual:        %s' % ('Dual model' if args.dual else 'Monomodel'))
-    print('\tdegree:      %s' % args.degree)
-    print('\tk-fold cv:   k=%s' % args.k)
-    print('\ttraining_q:  %s' % args.training_fraction)
-    print('\tcleaning:    %s' % ('Cleaning data' if args.clean else 'No cleaning'))
-    print('\tnormalizing: %s' % ('Normalizing data' if args.normalize else 'No normalizing'))
-    print('-------------------\n\n')
+    logging.info('\nSettings:')
+    logging.info('\tDataset:     %s' % dataset)
+    logging.info('\tMethod:      %s' % args.method)
+    logging.info('\tdual:        %s' % ('Dual model' if args.dual else 'Monomodel'))
+    logging.info('\tdegree:      %s' % args.degree)
+    logging.info('\tk-fold cv:   k=%s' % args.k)
+    logging.info('\ttraining_q:  %s' % args.training_fraction)
+    logging.info('\tcleaning:    %s' % ('Cleaning data' if args.clean else 'No cleaning'))
+    logging.info('\tnormalizing: %s' % ('Normalizing data' if args.normalize else 'No normalizing'))
+    logging.info('-------------------\n\n')
 
 
 def filter_dataset(dataset, filter):
@@ -296,6 +310,11 @@ if __name__ == "__main__":
     if args.version:
         print('turbinelearn version %s' % TURBINELEARN_VERSION)
         exit(0)
+
+    # Set logging to have no prefix and to use arg_parse's loglevel
+    logging.basicConfig(format='%(message)s',
+                        level=args.loglevel)
+
     dataset = filter_dataset(dataset, args.dataset)
     if not dataset:
         exit('Usage: turbine --method=pca data/LOCO*csv')

@@ -7,7 +7,7 @@ from turbinelearn import DualLinearModel
 import turbinelearn as tblearn
 from datasets import relpath
 
-class TestLearning(TestCase):
+class TestDualLearning(TestCase):
 
     def setUp(self):
         self.fnames = [relpath('data', 'LOCO_B_HTA.csv'),
