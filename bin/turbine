@@ -43,9 +43,14 @@ def visualize(data, training_data, test_data, reg_mod):
 
 def create_argparse():
     parser = argparse.ArgumentParser(description='Learns a polynomial.')
-    parser.add_argument('-m', '--method', dest='method', choices=['fcv', 'icv', 'simple', 'pca', 'reg'], required=True,
-                        help='Uses either filebased cross validation (fcv), individual file cross validation (icv), run a single train-test run on each file (simple) or do PCA (pca)')
-    parser.add_argument('-d', '--degree', dest='degree', type=int, choices=range(1, 10), default=2,
+    parser.add_argument('-m', '--method', dest='method',
+                        choices=['fcv', 'icv', 'simple', 'pca', 'reg', 'progress'],
+                        required=True,
+                        help=('Uses either filebased cross validation (fcv), '
+                              'individual file cross validation (icv), '
+                              'run a single train-test run on each file (simple) '
+                              'or do PCA (pca)'))
+    parser.add_argument('-d', '--degree', dest='degree', type=int, default=2,
                         help='The degree of the polynomial to train, defaults to 2')
 
     parser.add_argument('--clean', dest='clean', action='store_true',
@@ -59,8 +64,10 @@ def create_argparse():
 
     parser.add_argument('-t', '--training-fraction', dest='training_fraction', type=float, default=0.6,
                         help='The fraction of data to use as training data, only used when method=simple')
-    parser.add_argument('-k', '--k', dest='k', type=int, choices=range(1, 10), default=2,
-                        help='The number of folds to keep out when using cross validation. For method=fcv it is the number of files to keep out')
+    parser.add_argument('-k', '--k', dest='k', type=int, default=2,
+                        help=('The number of folds to keep out when using cross validation.  '
+                              'For method=fcv it is the number of files to keep out.  '
+                              'For method=progress it is the number of steps in the training.'))
     parser.add_argument('--dataset', dest='dataset', choices=['HG', 'HT', 'all'], default='all',
                         help='The dataset to use, HG, HT, or all.')
 
@@ -199,6 +206,47 @@ def method_reg(params):
     plt.show()
 
 
+def method_progress(params):
+    plt.title('Turbine polynomial')
+    dataset = [params.dataset[0]]  # TODO add support for more files with stddev
+    N = len(dataset)
+    progress = []
+    for i in range(N):
+        input_file = dataset[i]
+        fname = path_split(input_file)
+        plt.ylabel(fname[1])
+        print("\nDoing regression for %s" % input_file)
+        progress = compute_learning_progress(input_file,
+                                             steps=params.k,
+                                             degree=params.degree,
+                                             limits=get_limits(params),
+                                             normalize=get_normalize(params))
+    r2train  = [x[0] for x in progress]
+    r2test   = [x[1] for x in progress]
+    rmstrain = [x[2] for x in progress]
+    rmstest  = [x[3] for x in progress]
+
+    pp = lambda lst: " ".join(map(lambda x: "%.3f" % x, lst))
+    print('R^2 train:  %s' % pp(r2train))
+    print('R^2 test:   %s' % pp(r2test))
+    print('RMS train:  %s' % pp(rmstrain))
+    print('RMS test:   %s' % pp(rmstest))
+
+    plt.subplot(2, 1, 1)
+    plt.ylabel('R^2')
+    legend_r2train, = plt.plot(r2train, label='R^2 training')
+    legend_r2test,  = plt.plot(r2test,  label='R^2 test')
+    plt.legend(handles=[legend_r2train, legend_r2test])
+
+    plt.subplot(2, 1, 2)
+    plt.ylabel('RMS')
+    legend_rmstrain, = plt.plot(rmstrain, label='RMS training')
+    legend_rmstest,  = plt.plot(rmstest,  label='RMS test')
+    plt.legend(handles=[legend_rmstrain, legend_rmstest])
+    plt.show()
+
+
+
 def main(args, dataset):
     params = LearningParameter(degree=args.degree,
                                k=args.k,
@@ -213,6 +261,7 @@ def main(args, dataset):
         'icv'    : method_icv,
         'simple' : method_simple,
         'pca'    : method_pca,
+        'progress' : method_progress,
         'reg'    : method_reg
     }
     fn = methods[args.method]

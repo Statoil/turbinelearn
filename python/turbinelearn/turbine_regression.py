@@ -44,22 +44,30 @@ def linear_regression(X, y):
     return reg
 
 
-def evaluate(training_data, test_data, reg_mod, degree=2):
+
+def do_evaluate(training_data, test_data, reg_mod, degree=2):
     r2_train = reg_mod.score(*training_data)
     r2_test  = reg_mod.score(*test_data)
+    rms_train = mean_squared_error(training_data[1], reg_mod.predict(training_data[0]))
+    rms_test  = mean_squared_error(test_data[1], reg_mod.predict(test_data[0]))
+    gen_pol = generate_polynomial(reg_mod, features=list(training_data[0]))
+    return r2_train, r2_test, rms_train, rms_test, gen_pol
+
+def evaluate(training_data, test_data, reg_mod, degree=2):
+    reg_res = do_evaluate(training_data, test_data, reg_mod, degree=2)
+    r2_train, r2_test, rms_train, rms_test, gen_pol = reg_res
+
     print("R^2 training: %.5f" % reg_mod.score(*training_data))
     print("R^2 test:     %.5f" % reg_mod.score(*test_data))
 
-    rms_train = mean_squared_error(training_data[1], reg_mod.predict(training_data[0]))
-    rms_test  = mean_squared_error(test_data[1], reg_mod.predict(test_data[0]))
     print("RMS training: %.5f" % rms_train)
     print("RMS test:     %.5f" % rms_test)
 
-    print("Generated polynomial:\n\t %s" %
-                        generate_polynomial(reg_mod, features=list(training_data[0])))
+    print("Generated polynomial:\n\t %s" % gen_pol)
 
 
-def regression(data_files, training_fraction=0.6, degree=2, limits=None, normalize=(),):
+
+def regression(data_files, training_fraction=0.6, degree=2, limits=None, normalize=()):
     dataset = None
 
     data = load_data(data_files)
@@ -161,6 +169,39 @@ def pca(data_file, limits=None, normalize=()):
     X_1 = [x[0] for x in X_2D]
     X_2 = [x[1] for x in X_2D]
     return X_1, X_2, y
+
+
+def compute_learning_progress(data_files, steps=10, degree=2, limits=None, normalize=()):
+    """Trains a polynomial with n/steps fraction increments.  Returns error."""
+
+    data = load_data(data_files)
+    N = len(data)
+    print(" >> Loaded %d data points" % N)
+
+    progress = []
+    step_size = 1/(steps+1)
+    for i in range(steps):
+        fraction = (i+1) * step_size
+        data = load_data(data_files)
+        data = preprocess_data(data, limits=limits, normalize=normalize)
+        print(" >> Using  %d / %d data points after preprocessing (deleted %d points)" %
+              (len(data), N, N-len(data)))
+
+        data = extract_data_set(data)
+        data[0] = polynomialize_data(data[0])
+        data, training_data, test_data = split_data_set(data,
+                                                        training_fraction=fraction)
+
+        if not (data and training_data and test_data):
+            print(" >> Did not have enough data to do regression")
+            continue
+
+        reg_mod = linear_regression(*training_data)
+
+        reg_res = list(do_evaluate(training_data, test_data, reg_mod, degree=2))[:4]
+        progress.append(reg_res)
+    return progress
+
 
 
 def generate_polynomial(linear_model, features):
