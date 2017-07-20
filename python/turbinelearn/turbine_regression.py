@@ -249,16 +249,18 @@ def filebased_cross_validation(data_files,
         reg_mod = linear_regression(*data)
 
     r2_scores = [reg_mod.score(*data)]
+    learning_results = []
 
     logging.info("Testing on test_data_files %s" % ", ".join(test_data_files))
     for input_file in test_data_files:
         test_data = fetch_data(input_file, degree=degree,
                                dual_model=dual_model, limits=limits, normalize=())
 
-        evaluate(data, test_data, reg_mod, degree=degree)
+        learn_res = evaluate(data, test_data, reg_mod, degree=degree)
         r2_scores.append(reg_mod.score(*test_data))
+        learning_results.append(learn_res)
 
-    return r2_scores
+    return r2_scores, learning_results
 
 def file_cross_val(data_files,
                    k=2,
@@ -267,11 +269,16 @@ def file_cross_val(data_files,
                    limits=None,
                    normalize=()):
     test_data = []
+    learning_results = []
 
     for training_set, test_set in enum_files(data_files, k):
-        r2_scores = filebased_cross_validation(training_set, test_set,
-                                               degree=degree, dual_model=dual_model,
-                                               limits=limits, normalize=normalize)
+        r2_scores, res = filebased_cross_validation(training_set,
+                                                    test_set,
+                                                    degree=degree,
+                                                    dual_model=dual_model,
+                                                    limits=limits,
+                                                    normalize=normalize)
 
         test_data.append((training_set, test_set, r2_scores))
-    return test_data
+        learning_results.append(res)
+    return test_data, learning_results

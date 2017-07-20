@@ -54,13 +54,11 @@ class TestLearning(TestCase):
 
         scenarios = itertools.product([False, True], [1], [2,3])
         for dual_model, k, degree in scenarios:
-            test_data = tblearn.file_cross_val(
-                                        self.data_files,
-                                        k=k,
-                                        degree=degree,
-                                        dual_model=dual_model,
-                                        limits=tblearn.LIMITS
-                                        )
+            test_data, _ = tblearn.file_cross_val(self.data_files,
+                                                  k=k,
+                                                  degree=degree,
+                                                  dual_model=dual_model,
+                                                  limits=tblearn.LIMITS)
             results = zip(*test_data)[2]
 
             min_training_score = min(zip(*results)[0])

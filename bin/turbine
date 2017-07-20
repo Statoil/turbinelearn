@@ -99,38 +99,47 @@ def get_normalize(params):
 
 
 def method_fcv(params):
-    test_data = file_cross_val(params.dataset,
-                               k=params.k,
-                               degree=params.degree,
-                               limits=get_limits(params),
-                               normalize=get_normalize(params),
-                               dual_model=params.dual_model)
+    test_data, learn_res = file_cross_val(params.dataset,
+                                          k=params.k,
+                                          degree=params.degree,
+                                          limits=get_limits(params),
+                                          normalize=get_normalize(params),
+                                          dual_model=params.dual_model)
 
     logging.info("\n\n\n\n################ SUMMARY ###############")
-    logging.info(" Cross validations performed: %d" % len(test_data))
+    logging.info("Cross validations performed: %d" % len(test_data))
 
     test_data.sort(key=lambda result: result[2][0])
     training_scores = zip(*(zip(*test_data)[2]))[0]
 
-    print("\n R^2 training score:")
-    print("\t- Average: \t%.6f" % np.average(training_scores))
-    print("\t- Median:  \t%.6f" % np.median(training_scores))
-    print("\t- Std dev: \t%.6f" % np.std(training_scores))
-    print("\t- Worst:   \t%.6f  (obtained when testing on: [%s])" %
-                                (training_scores[0], ", ".join(test_data[0][1])))
+    logging.info("\nR^2 training score:")
+    logging.info("\t- Average: \t%.6f" % np.average(training_scores))
+    logging.info("\t- Median:  \t%.6f" % np.median(training_scores))
+    logging.info("\t- Std dev: \t%.6f" % np.std(training_scores))
+    logging.info("\t- Worst:   \t%.6f  (obtained when testing on: [%s])" %
+                 (training_scores[0], ", ".join(test_data[0][1])))
 
     test_data.sort(key=lambda result: min(result[2][1:]))
     test_scores = [result[1:] for result in zip(*test_data)[2]]
     all_test_scores = reduce(lambda x,y: x+y, test_scores)
 
-    print("\n R^2 test score:")
+    print("\nR^2 test score:")
     print("\t- Average: \t%.6f" % np.average(all_test_scores))
     print("\t- Median:  \t%.6f" % np.median(all_test_scores))
     print("\t- Std dev: \t%.6f" % np.std(all_test_scores))
-    print("\t- Worst:   \t%r  (obtained when testing on: [%s])" %
-                              (test_scores[0], ", ".join(test_data[0][1])))
+    print("\t- Worst:   \t%.6f (obtained when testing on: %s)" %
+          (test_scores[0][0], ", ".join(test_data[0][1])))
 
-    print("\n########################################")
+
+    best_p = None
+    best_s = -5
+    for case in learn_res:
+        for res in case:
+            if res.r2_test > best_s:
+                best_s = res.r2_test
+                best_p = res.gen_pol
+    print('%s' % best_p)
+    print('Score: %.3f' % best_s)
 
 
 
@@ -222,7 +231,12 @@ def method_reg(params):
 
 def method_progress(params):
     plt.title('Turbine polynomial')
-    dataset = [params.dataset[0]]  # TODO add support for more files with stddev
+
+    dataset = [params.dataset[0]]
+    if len(params.dataset) > 1:
+        # TODO add support for more files with stddev
+        logging.error('Warning: Progress currently supports one file only')
+        logging.error('Warning: Using %s' % dataset)
     N = len(dataset)
     progress = []
     for i in range(N):
@@ -236,7 +250,7 @@ def method_progress(params):
                                              limits=get_limits(params),
                                              normalize=get_normalize(params))
     r2train  = [x.r2_train for x in progress]
-    r2test   = [x.r2_tes for x in progress]
+    r2test   = [x.r2_test for x in progress]
     rmstrain = [x.rms_train for x in progress]
     rmstest  = [x.rms_test for x in progress]
 
