@@ -332,4 +332,7 @@ if __name__ == "__main__":
     dataset = filter_dataset(dataset, args.dataset)
     if not dataset:
         exit('Usage: turbine --method=pca data/LOCO*csv')
-    main(args, dataset)
+    try:
+        main(args, dataset)
+    except KeyboardInterrupt:
+        logging.info('\n\nUser aborted.\n')
