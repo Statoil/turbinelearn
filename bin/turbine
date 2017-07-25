@@ -161,16 +161,14 @@ def method_fcv(params):
           (test_scores[0][0], ", ".join(test_data[0][1])))
 
 
-    best_p = None
-    best_s = -5
+    best = None
     for case in learn_res:
         for res in case:
-            if res.r2_test > best_s:
-                best_s = res.r2_test
-                best_p = res.gen_pol
-    print('%s' % best_p)
-    print('Score: %.3f' % best_s)
-
+            if best is None or res.r2_test > best.r2_test:
+                best = res
+    print('%s' % best.gen_pol)
+    print('Score: %.3f' % best.r2_test)
+    return best
 
 
 def method_icv(params):
