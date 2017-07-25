@@ -30,6 +30,36 @@ LearningParameter = namedtuple('LearningParameter',
                                 'dual_model'])
 
 
+def get_prediction(params, i):
+    """Return (y, prediction) for test data for ith dataset"""
+    res = train_and_evaluate_single_file(params.dataset[i],
+                                         training_fraction=params.training_fraction,
+                                         degree=params.degree,
+                                         limits=get_limits(params),
+                                         normalize=get_normalize(params))
+    data, training_data, test_data, reg_mod = res
+    X, y = test_data
+    predicted = reg_mod.predict(X)
+    return y, predicted
+
+
+def method_prediction(params):
+    i = 0
+    N = len(params.dataset)
+    for input_file in params.dataset:
+        y, predicted = get_prediction(params, i)
+        fname = path_split(input_file)
+        i = i + 1
+        if N > 1:
+            plt.subplot(math.ceil(N/2.0), 2, i)
+        plt.title(fname[1])
+        plt.scatter(y, predicted)
+        plt.plot([y.min(), y.max()], [y.min(), y.max()], 'k--', lw=1)
+        plt.xlabel('Measured')
+        plt.ylabel('Predicted')
+    plt.show()
+
+
 def visualize(data, training_data, test_data, reg_mod):
     data_timeline = data[1].index
     training_data_timeline = training_data[1].index
@@ -45,7 +75,7 @@ def visualize(data, training_data, test_data, reg_mod):
 def create_argparse():
     parser = argparse.ArgumentParser(description='Learns a polynomial.')
     parser.add_argument('-m', '--method', dest='method',
-                        choices=['fcv', 'icv', 'simple', 'pca', 'reg', 'progress'],
+                        choices=['fcv', 'icv', 'simple', 'pca', 'reg', 'progress', 'prediction'],
                         required=True,
                         help=('Uses either filebased cross validation (fcv), '
                               'individual file cross validation (icv), '
@@ -131,16 +161,14 @@ def method_fcv(params):
           (test_scores[0][0], ", ".join(test_data[0][1])))
 
 
-    best_p = None
-    best_s = -5
+    best = None
     for case in learn_res:
         for res in case:
-            if res.r2_test > best_s:
-                best_s = res.r2_test
-                best_p = res.gen_pol
-    print('%s' % best_p)
-    print('Score: %.3f' % best_s)
-
+            if best is None or res.r2_test > best.r2_test:
+                best = res
+    print('%s' % best.gen_pol)
+    print('Score: %.3f' % best.r2_test)
+    return best
 
 
 def method_icv(params):
@@ -290,6 +318,7 @@ def main(args, dataset):
         'simple' : method_simple,
         'pca'    : method_pca,
         'progress' : method_progress,
+        'prediction' : method_prediction,
         'reg'    : method_reg
     }
     fn = methods[args.method]
