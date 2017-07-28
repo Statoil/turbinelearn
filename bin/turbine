@@ -158,7 +158,7 @@ def method_fcv(params):
     print("\t- Median:  \t%.6f" % np.median(all_test_scores))
     print("\t- Std dev: \t%.6f" % np.std(all_test_scores))
     print("\t- Worst:   \t%.6f (obtained when testing on: %s)" %
-          (test_scores[0][0], ", ".join(test_data[0][1])))
+          (min(test_scores[0]), ", ".join(test_data[0][1])))
 
 
     best = None
