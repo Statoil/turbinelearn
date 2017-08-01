@@ -25,6 +25,15 @@ FEATURE_MAP = {
     "GAS GENERATOR SPEED"                               : "SPEED"
 }
 
+POLYNOMIAL_MAP = {
+    "AIR_IN_TEMP" : "TI",
+    "AIR_IN_PRES" : "PI",
+    "DISCHARGE_TEMP" : "TT",
+    "DISCHARGE_PRES" : "PT",
+    "SIMULATED_EFF" : "EFF",
+    "SPEED" : "SI"
+}
+
 
 def enum_files(dataset, k=2):
     """For cross validation: enumerates (training, test) for k-fold cv"""

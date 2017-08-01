@@ -16,6 +16,7 @@ from sklearn.ensemble import IsolationForest
 from .turbine_file import (enum_files, load_single_file, load_data,
                            normalize_column, preprocess_data, split_data_set,
                            extract_data_set, FEATURES, TARGET)
+from .turbine_file import POLYNOMIAL_MAP
 
 from .dual_linear_regression import DualLinearModel
 
@@ -291,13 +292,21 @@ def compute_learning_progress(data_files, steps=10, degree=2, limits=None, norma
     return progress
 
 
+def _translate(s, mapping):
+    for k in mapping:
+        s = s.replace(k, mapping[k])
+    return s
 
-def generate_polynomial(linear_model, features):
+def generate_polynomial(linear_model, features, linebreak=False):
     float_fmt = '%.4f'
+
+    features = [_translate(f, POLYNOMIAL_MAP) for f in features]
 
     polypoly = float_fmt % (linear_model.coef_[0] + linear_model.intercept_)
     for variable, coef in zip(features, linear_model.coef_):
-        polypoly += "\n\t+ " if coef >= 0 else "\n\t- "
+        sep = "\n\t" if linebreak else " "
+        polypoly += sep
+        polypoly += "+ " if coef >= 0 else "- "
         polypoly += float_fmt % abs(coef) + "*" + variable
 
     return polypoly
