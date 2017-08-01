@@ -25,6 +25,15 @@ FEATURE_MAP = {
     "GAS GENERATOR SPEED"                               : "SPEED"
 }
 
+POLYNOMIAL_MAP = {
+    "AIR_IN_TEMP" : "TI",
+    "AIR_IN_PRES" : "PI",
+    "DISCHARGE_TEMP" : "TT",
+    "DISCHARGE_PRES" : "PT",
+    "SIMULATED_EFF" : "EFF",
+    "SPEED" : "SI"
+}
+
 
 def enum_files(dataset, k=2):
     """For cross validation: enumerates (training, test) for k-fold cv"""
@@ -44,10 +53,13 @@ def load_single_file(filename):
     return data
 
 
-def load_data(files):
-    if (isinstance(files,basestring)):
+def load_data(files, concat=True):
+    if isinstance(files, str):
         files = [files]
-    return pandas.concat(map(load_single_file, files))
+
+    if concat:
+        return pandas.concat(map(load_single_file, files))
+    return map(load_single_file, files)
 
 
 def normalize_column(data, field):

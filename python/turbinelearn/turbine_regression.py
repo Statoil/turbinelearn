@@ -4,7 +4,7 @@ from collections import namedtuple
 from itertools import combinations_with_replacement
 import logging
 import numpy as np
-from pandas import DataFrame
+from pandas import DataFrame, concat
 
 from sklearn import linear_model
 from sklearn.preprocessing import PolynomialFeatures
@@ -16,6 +16,7 @@ from sklearn.ensemble import IsolationForest
 from .turbine_file import (enum_files, load_single_file, load_data,
                            normalize_column, preprocess_data, split_data_set,
                            extract_data_set, FEATURES, TARGET)
+from .turbine_file import POLYNOMIAL_MAP
 
 from .dual_linear_regression import DualLinearModel
 
@@ -25,7 +26,7 @@ LearningResult = namedtuple('LearningResult',
                              'r2_test',
                              'rms_train',
                              'rms_test',
-                             'gen_pol'])
+                             'polynomial'])
 
 
 def detect_outliers(data):
@@ -46,8 +47,13 @@ def polynomialize_data(X, degree=2):
     return DataFrame(data=poly_X, index=X.index, columns=feature_names)
 
 
-def linear_regression(X, y):
+def linear_regression(X, y, dual_model=False, ridge=False):
+    if dual_model:
+        return DualLinearModel.dual_regression(X, y)
+
     reg = linear_model.LinearRegression()
+    if ridge:
+        reg = linear_model.Ridge()
     reg = reg.fit(X, y)
     return reg
 
@@ -57,12 +63,12 @@ def do_evaluate(training_data, test_data, reg_mod, degree=2):
     r2_test  = reg_mod.score(*test_data)
     rms_train = mean_squared_error(training_data[1], reg_mod.predict(training_data[0]))
     rms_test  = mean_squared_error(test_data[1], reg_mod.predict(test_data[0]))
-    gen_pol = generate_polynomial(reg_mod, features=list(training_data[0]))
+    polynomial = generate_polynomial(reg_mod, features=list(training_data[0]))
     res = LearningResult(r2_train=r2_train,
                          r2_test=r2_test,
                          rms_train=rms_train,
                          rms_test=rms_test,
-                         gen_pol=gen_pol)
+                         polynomial=polynomial)
     return res
 
 
@@ -73,7 +79,7 @@ def print_result(learning_result):
     logging.info("RMS training: %.5f" % learning_result.rms_train)
     logging.info("RMS test:     %.5f" % learning_result.rms_test)
 
-    logging.info("Generated polynomial:\n\t %s" % learning_result.gen_pol)
+    logging.info("Generated polynomial:\n\t %s" % learning_result.polynomial)
 
 
 def evaluate(training_data, test_data, reg_mod, degree=2):
@@ -82,7 +88,12 @@ def evaluate(training_data, test_data, reg_mod, degree=2):
     return reg_res
 
 
-def regression(data_files, training_fraction=0.6, degree=2, limits=None, normalize=()):
+def regression(data_files,
+               training_fraction=0.6,
+               degree=2,
+               limits=None,
+               normalize=(),
+               ridge=False):
     dataset = None
 
     data = load_data(data_files)
@@ -105,7 +116,7 @@ def regression(data_files, training_fraction=0.6, degree=2, limits=None, normali
         logging.WARN(" >> Did not have enough data to do regression")
         return
 
-    reg_mod = linear_regression(*training_data)
+    reg_mod = linear_regression(*training_data, ridge=ridge)
 
     reg_res = evaluate(training_data, test_data, reg_mod, degree=degree)
     return dataset, (data, training_data, test_data, reg_mod), reg_res
@@ -125,6 +136,76 @@ def fetch_and_split_data(data_files, training_fraction=0.6, degree=2, limits=Non
     data[0] = polynomialize_data(data[0], degree=degree)
 
     return split_data_set(data, training_fraction=training_fraction)
+
+
+def _xy_concat(Xy1, Xy2):
+    """Takes two pairs Xy1 = (X1, y1) and Xy2 = (X2, y2) and pairwise concatenates
+    into (X1|X2, y1|y2).
+
+    """
+    return (concat((Xy1[0], Xy2[0]), ignore_index=True),
+            concat((Xy1[1], Xy2[1]), ignore_index=True))
+
+def fetch_and_join_data(data_files,
+                        training_fraction=0.6,
+                        degree=2,
+                        dual_model=False,
+                        limits=None,
+                        normalize=()):
+    """Concatenates the training part of all files into on training part, and same
+    with test part.
+
+    Beware that this function returns "((None, None), training, test)" since X,y
+    is not necessarily sensible; it would contain duplicate indices.
+
+    """
+
+    data = load_data(data_files, concat=False)
+    training_frame = None
+    test_frame = None
+    for f in data:
+        load_features = FEATURES + ["TURBINE_TYPE"]
+        f = preprocess_data(f, features=load_features, limits=limits, normalize=normalize)
+        logging.info(" >> After preprocessing %d data points remaining" % len(f))
+        if len(f) == 0:
+            raise ValueError("No data left after preprocessing.")
+
+        X, y = f[FEATURES], f[TARGET]
+        if degree > 1:
+            X = polynomialize_data(X, degree=degree)
+        if dual_model:
+            X = DualLinearModel.format(X, f["TURBINE_TYPE"])
+
+        _, training_data, test_data = split_data_set((X,y), training_fraction=training_fraction)
+        if training_frame is None:
+            training_frame = training_data
+            test_frame = test_data
+        else:
+            training_frame = _xy_concat(training_frame, training_data)
+            test_frame = _xy_concat(test_frame, test_data)
+
+    return (None, None), training_frame, test_frame
+
+
+def joined_regression(data_files,
+                      training_fraction=0.6,
+                      degree=2,
+                      dual_model=False,
+                      limits=None,
+                      normalize=(),
+                      ridge=False):
+    data, train, test = fetch_and_join_data(data_files,
+                                            training_fraction=training_fraction,
+                                            degree=degree,
+                                            dual_model=dual_model,
+                                            limits=limits,
+                                            normalize=normalize)
+
+    reg_mod = linear_regression(*train, dual_model=dual_model, ridge=ridge)
+    reg_res = evaluate(train, test, reg_mod, degree=degree)
+    return data_files, (data, train, test, reg_mod), reg_res
+
+
 
 def fetch_data(data_files, degree=1, dual_model=False, limits=None, normalize=()):
     data = load_data(data_files)
@@ -148,14 +229,15 @@ def train_and_evaluate_single_file(data_file,
                                    training_fraction=0.6,
                                    degree=2,
                                    limits=None,
-                                   normalize=()):
+                                   normalize=(),
+                                   ridge=False):
     [data, training_data, test_data] = fetch_and_split_data(data_file,
                                                             training_fraction=training_fraction,
                                                             degree=degree,
                                                             limits=limits,
                                                             normalize=normalize)
 
-    reg_mod = linear_regression(*training_data)
+    reg_mod = linear_regression(*training_data, ridge=ridge)
     evaluate(training_data, test_data, reg_mod, degree=degree)
     return data, training_data, test_data, reg_mod
 
@@ -164,12 +246,13 @@ def individual_cross_validation(data_file,
                                 k=5,
                                 degree=2,
                                 limits=None,
-                                normalize=()):
+                                normalize=(),
+                                ridge=False):
     data = fetch_data([data_file], degree=degree, limits=limits, normalize=normalize)
     # Split dataset into k consecutive folds (without shuffling).
-    scores = cross_val_score(linear_model.LinearRegression(), *data, cv=k)
-    logging.info("Accuracy: %0.4f (+/- %0.4f)" % (scores.mean(), scores.std() * 2))
-    logging.info("Scores:   %s" % ", ".join(['%.4f' % s for s in scores]))
+    model = linear_model.Ridge() if ridge else linear_model.LinearRegression()
+    scores = cross_val_score(model, *data, cv=k)
+    return scores
 
 
 def pca(data_file, limits=None, normalize=()):
@@ -187,7 +270,12 @@ def pca(data_file, limits=None, normalize=()):
     return X_1, X_2, y
 
 
-def compute_learning_progress(data_files, steps=10, degree=2, limits=None, normalize=()):
+def compute_learning_progress(data_files,
+                              steps=10,
+                              degree=2,
+                              limits=None,
+                              normalize=(),
+                              ridge=False):
     """Trains a polynomial with n/steps fraction increments.  Returns error."""
 
     data = load_data(data_files)
@@ -212,20 +300,28 @@ def compute_learning_progress(data_files, steps=10, degree=2, limits=None, norma
             logging.WARN(" >> Did not have enough data to do regression")
             continue
 
-        reg_mod = linear_regression(*training_data)
+        reg_mod = linear_regression(*training_data, ridge=ridge)
 
         reg_res = do_evaluate(training_data, test_data, reg_mod, degree=2)
         progress.append(reg_res)
     return progress
 
 
+def _translate(s, mapping):
+    for k in mapping:
+        s = s.replace(k, mapping[k])
+    return s
 
-def generate_polynomial(linear_model, features):
+def generate_polynomial(linear_model, features, linebreak=False):
     float_fmt = '%.4f'
+
+    features = [_translate(f, POLYNOMIAL_MAP) for f in features]
 
     polypoly = float_fmt % (linear_model.coef_[0] + linear_model.intercept_)
     for variable, coef in zip(features, linear_model.coef_):
-        polypoly += "\n\t+ " if coef >= 0 else "\n\t- "
+        sep = "\n\t" if linebreak else " "
+        polypoly += sep
+        polypoly += "+ " if coef >= 0 else "- "
         polypoly += float_fmt % abs(coef) + "*" + variable
 
     return polypoly
@@ -236,17 +332,15 @@ def filebased_cross_validation(data_files,
                                degree=2,
                                dual_model=False,
                                limits=None,
-                               normalize=()):
+                               normalize=(),
+                               ridge=False):
 
     logging.info("\nTraining on data_files %s " % ", ".join(data_files))
 
     data = fetch_data(data_files, degree=degree,
                       dual_model=dual_model, limits=limits, normalize=normalize)
 
-    if dual_model:
-        reg_mod = DualLinearModel.dual_regression(*data)
-    else:
-        reg_mod = linear_regression(*data)
+    reg_mod = linear_regression(*data, dual_model=dual_model, ridge=ridge)
 
     r2_scores = [reg_mod.score(*data)]
     learning_results = []
@@ -267,7 +361,8 @@ def file_cross_val(data_files,
                    degree=2,
                    dual_model=False,
                    limits=None,
-                   normalize=()):
+                   normalize=(),
+                   ridge=False):
     test_data = []
     learning_results = []
 
@@ -277,7 +372,8 @@ def file_cross_val(data_files,
                                                     degree=degree,
                                                     dual_model=dual_model,
                                                     limits=limits,
-                                                    normalize=normalize)
+                                                    normalize=normalize,
+                                                    ridge=ridge)
 
         test_data.append((training_set, test_set, r2_scores))
         learning_results.append(res)
