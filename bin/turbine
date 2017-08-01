@@ -179,12 +179,17 @@ def method_fcv(params):
 def method_icv(params):
     for input_file in params.dataset:
         logging.info("\nDoing individual cross validation for %s" % input_file)
-        individual_cross_validation(input_file,
-                                    k=params.k,
-                                    degree=params.degree,
-                                    limits=get_limits(params),
-                                    normalize=get_normalize(params),
-                                    ridge=params.ridge)
+        scores = individual_cross_validation(input_file,
+                                             k=params.k,
+                                             degree=params.degree,
+                                             limits=get_limits(params),
+                                             normalize=get_normalize(params),
+                                             ridge=params.ridge)
+        fname = path_split(input_file)
+        print("\nFile:     %s" % fname[1])
+        print("Accuracy: %0.4f (+/- %0.4f)" % (scores.mean(), scores.std() * 2))
+        print("Scores:   %s" % ", ".join(['%.4f' % s for s in scores]))
+
 
 
 def method_simple(params):

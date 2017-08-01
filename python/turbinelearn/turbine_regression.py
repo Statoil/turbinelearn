@@ -252,8 +252,7 @@ def individual_cross_validation(data_file,
     # Split dataset into k consecutive folds (without shuffling).
     model = linear_model.Ridge() if ridge else linear_model.LinearRegression()
     scores = cross_val_score(model, *data, cv=k)
-    logging.info("Accuracy: %0.4f (+/- %0.4f)" % (scores.mean(), scores.std() * 2))
-    logging.info("Scores:   %s" % ", ".join(['%.4f' % s for s in scores]))
+    return scores
 
 
 def pca(data_file, limits=None, normalize=()):
