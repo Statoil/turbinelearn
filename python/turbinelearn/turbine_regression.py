@@ -4,7 +4,7 @@ from collections import namedtuple
 from itertools import combinations_with_replacement
 import logging
 import numpy as np
-from pandas import DataFrame
+from pandas import DataFrame, concat
 
 from sklearn import linear_model
 from sklearn.preprocessing import PolynomialFeatures
@@ -46,7 +46,10 @@ def polynomialize_data(X, degree=2):
     return DataFrame(data=poly_X, index=X.index, columns=feature_names)
 
 
-def linear_regression(X, y):
+def linear_regression(X, y, dual_model=False):
+    if dual_model:
+        return DualLinearModel.dual_regression(X, y)
+
     reg = linear_model.LinearRegression()
     reg = reg.fit(X, y)
     return reg
@@ -125,6 +128,75 @@ def fetch_and_split_data(data_files, training_fraction=0.6, degree=2, limits=Non
     data[0] = polynomialize_data(data[0], degree=degree)
 
     return split_data_set(data, training_fraction=training_fraction)
+
+
+def _xy_concat(Xy1, Xy2):
+    """Takes two pairs Xy1 = (X1, y1) and Xy2 = (X2, y2) and pairwise concatenates
+    into (X1|X2, y1|y2).
+
+    """
+    return (concat((Xy1[0], Xy2[0]), ignore_index=True),
+            concat((Xy1[1], Xy2[1]), ignore_index=True))
+
+def fetch_and_join_data(data_files,
+                        training_fraction=0.6,
+                        degree=2,
+                        dual_model=False,
+                        limits=None,
+                        normalize=()):
+    """Concatenates the training part of all files into on training part, and same
+    with test part.
+
+    Beware that this function returns "((None, None), training, test)" since X,y
+    is not necessarily sensible; it would contain duplicate indices.
+
+    """
+
+    data = load_data(data_files, concat=False)
+    training_frame = None
+    test_frame = None
+    for f in data:
+        load_features = FEATURES + ["TURBINE_TYPE"]
+        f = preprocess_data(f, features=load_features, limits=limits, normalize=normalize)
+        logging.info(" >> After preprocessing %d data points remaining" % len(f))
+        if len(f) == 0:
+            raise ValueError("No data left after preprocessing.")
+
+        X, y = f[FEATURES], f[TARGET]
+        if degree > 1:
+            X = polynomialize_data(X, degree=degree)
+        if dual_model:
+            X = DualLinearModel.format(X, f["TURBINE_TYPE"])
+
+        _, training_data, test_data = split_data_set((X,y), training_fraction=training_fraction)
+        if training_frame is None:
+            training_frame = training_data
+            test_frame = test_data
+        else:
+            training_frame = _xy_concat(training_frame, training_data)
+            test_frame = _xy_concat(test_frame, test_data)
+
+    return (None, None), training_frame, test_frame
+
+
+def joined_regression(data_files,
+                      training_fraction=0.6,
+                      degree=2,
+                      dual_model=False,
+                      limits=None,
+                      normalize=()):
+    data, train, test = fetch_and_join_data(data_files,
+                                            training_fraction=training_fraction,
+                                            degree=degree,
+                                            dual_model=dual_model,
+                                            limits=limits,
+                                            normalize=normalize)
+
+    reg_mod = linear_regression(*train, dual_model=dual_model)
+    reg_res = evaluate(train, test, reg_mod, degree=degree)
+    return data_files, (data, train, test, reg_mod), reg_res
+
+
 
 def fetch_data(data_files, degree=1, dual_model=False, limits=None, normalize=()):
     data = load_data(data_files)
@@ -243,10 +315,7 @@ def filebased_cross_validation(data_files,
     data = fetch_data(data_files, degree=degree,
                       dual_model=dual_model, limits=limits, normalize=normalize)
 
-    if dual_model:
-        reg_mod = DualLinearModel.dual_regression(*data)
-    else:
-        reg_mod = linear_regression(*data)
+    reg_mod = linear_regression(*data, dual_model=dual_model)
 
     r2_scores = [reg_mod.score(*data)]
     learning_results = []

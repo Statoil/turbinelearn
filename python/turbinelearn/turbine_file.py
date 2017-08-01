@@ -44,10 +44,13 @@ def load_single_file(filename):
     return data
 
 
-def load_data(files):
-    if (isinstance(files,basestring)):
+def load_data(files, concat=True):
+    if isinstance(files, str):
         files = [files]
-    return pandas.concat(map(load_single_file, files))
+
+    if concat:
+        return pandas.concat(map(load_single_file, files))
+    return map(load_single_file, files)
 
 
 def normalize_column(data, field):

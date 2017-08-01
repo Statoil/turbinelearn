@@ -75,7 +75,7 @@ def visualize(data, training_data, test_data, reg_mod):
 def create_argparse():
     parser = argparse.ArgumentParser(description='Learns a polynomial.')
     parser.add_argument('-m', '--method', dest='method',
-                        choices=['fcv', 'icv', 'simple', 'pca', 'reg', 'progress', 'prediction'],
+                        choices=['fcv', 'icv', 'simple', 'pca', 'reg', 'progress', 'prediction', 'export'],
                         required=True,
                         help=('Uses either filebased cross validation (fcv), '
                               'individual file cross validation (icv), '
@@ -256,6 +256,18 @@ def method_reg(params):
     plt.show()
 
 
+def method_export(params):
+    _, _, reg_res = joined_regression(params.dataset,
+                                      training_fraction=params.training_fraction,
+                                      degree=params.degree,
+                                      dual_model=params.dual_model,
+                                      limits=get_limits(params),
+                                      normalize=get_normalize(params))
+
+    print('R^2 score: %.4f' % reg_res.r2_test)
+    print(reg_res.polynomial)
+
+
 def method_progress(params):
     plt.title('Turbine polynomial')
 
@@ -316,6 +328,7 @@ def main(args, dataset):
         'icv'    : method_icv,
         'simple' : method_simple,
         'pca'    : method_pca,
+        'export' : method_export,
         'progress' : method_progress,
         'prediction' : method_prediction,
         'reg'    : method_reg

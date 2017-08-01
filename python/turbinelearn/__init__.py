@@ -3,7 +3,7 @@ from .turbine_file import (enum_files, load_single_file, load_data,
 from .turbine_file import FEATURES, TARGET, LIMITS
 
 from .turbine_regression import file_cross_val, individual_cross_validation
-from .turbine_regression import train_and_evaluate_single_file
+from .turbine_regression import train_and_evaluate_single_file, joined_regression
 from .turbine_regression import regression, pca
 from .turbine_regression import compute_learning_progress
 from .turbine_regression import generate_polynomial
@@ -11,7 +11,7 @@ from .turbine_regression import detect_outliers
 
 from .dual_linear_regression import DualLinearModel
 
-TURBINELEARN_VERSION = '0.3.0'
+TURBINELEARN_VERSION = '0.3.1'
 __version__ = TURBINELEARN_VERSION
 
 __copyright__ = 'Copyright 2017, Statoil ASA'
