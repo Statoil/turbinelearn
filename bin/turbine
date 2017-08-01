@@ -27,7 +27,7 @@ except ImportError as err:
 LearningParameter = namedtuple('LearningParameter',
                                ['degree', 'training_fraction', 'k',
                                 'dataset', 'clean', 'normalize',
-                                'dual_model'])
+                                'dual_model', 'ridge'])
 
 
 def get_prediction(params, i):
@@ -36,7 +36,8 @@ def get_prediction(params, i):
                                          training_fraction=params.training_fraction,
                                          degree=params.degree,
                                          limits=get_limits(params),
-                                         normalize=get_normalize(params))
+                                         normalize=get_normalize(params),
+                                         ridge=params.ridge)
     data, training_data, test_data, reg_mod = res
     X, y = test_data
     predicted = reg_mod.predict(X)
@@ -106,6 +107,9 @@ def create_argparse():
                         help='Will build separate models for HG and HT before combining them, defaults to --no-dual')
     parser.add_argument('--no-dual', dest='dual', action='store_false')
     parser.set_defaults(dual=False)
+    parser.add_argument('--ridge', dest='ridge', action='store_true',
+                        help='Will choose ridge regression over linear regression.')
+    parser.set_defaults(ridge=False)
 
     parser.add_argument('-v', '--version', dest='version', action='store_true',
                         help='Prints version and exits.')
@@ -134,7 +138,8 @@ def method_fcv(params):
                                           degree=params.degree,
                                           limits=get_limits(params),
                                           normalize=get_normalize(params),
-                                          dual_model=params.dual_model)
+                                          dual_model=params.dual_model,
+                                          ridge=params.ridge)
 
     logging.info("\n\n\n\n################ SUMMARY ###############")
     logging.info("Cross validations performed: %d" % len(test_data))
@@ -166,8 +171,8 @@ def method_fcv(params):
         for res in case:
             if best is None or res.r2_test > best.r2_test:
                 best = res
+    print('R^2 score: %.3f' % best.r2_test)
     print('%s' % best.polynomial)
-    print('Score: %.3f' % best.r2_test)
     return best
 
 
@@ -178,7 +183,8 @@ def method_icv(params):
                                     k=params.k,
                                     degree=params.degree,
                                     limits=get_limits(params),
-                                    normalize=get_normalize(params))
+                                    normalize=get_normalize(params),
+                                    ridge=params.ridge)
 
 
 def method_simple(params):
@@ -189,7 +195,8 @@ def method_simple(params):
                                                        training_fraction=params.training_fraction,
                                                        degree=params.degree,
                                                        limits=get_limits(params),
-                                                       normalize=get_normalize(params))
+                                                       normalize=get_normalize(params),
+                                                       ridge=params.ridge)
         except ValueError as err:
             logging.ERROR('Could not train on file %s: %s' % (input_file, err))
             return
@@ -262,7 +269,8 @@ def method_export(params):
                                       degree=params.degree,
                                       dual_model=params.dual_model,
                                       limits=get_limits(params),
-                                      normalize=get_normalize(params))
+                                      normalize=get_normalize(params),
+                                      ridge=params.ridge)
 
     print('R^2 score: %.4f' % reg_res.r2_test)
     print(reg_res.polynomial)
@@ -321,7 +329,8 @@ def main(args, dataset):
                                dataset=dataset,
                                clean=args.clean,
                                normalize=args.normalize,
-                               dual_model=args.dual)
+                               dual_model=args.dual,
+                               ridge=args.ridge)
     print_params(args, dataset)
     methods = {
         'fcv'    : method_fcv,
@@ -344,6 +353,7 @@ def print_params(args, dataset):
     logging.info('\tDataset:     %s' % dataset)
     logging.info('\tMethod:      %s' % args.method)
     logging.info('\tdual:        %s' % ('Dual model' if args.dual else 'Monomodel'))
+    logging.info('\tridge:       %s' % ('Ridge regression' if args.ridge else 'Linear regression'))
     logging.info('\tdegree:      %s' % args.degree)
     logging.info('\tk-fold cv:   k=%s' % args.k)
     logging.info('\ttraining_q:  %s' % args.training_fraction)

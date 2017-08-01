@@ -45,7 +45,7 @@ class DualLinearModel:
         return DataFrame(data=data, index=X.index, columns=feature_names)
 
     @classmethod
-    def dual_regression(cls, X, y):
+    def dual_regression(cls, X, y, ridge=False):
         """
         Builds a dual linear model fitted for X and y.
 
@@ -76,12 +76,12 @@ class DualLinearModel:
             Xi = X[split_filter][orig_features]
             yi = y[split_filter]
 
-            regi = linear_model.LinearRegression()
+            regi = linear_model.Ridge() if ridge else linear_model.LinearRegression()
             regi = regi.fit(Xi, yi)
 
             reg_mod.append(regi)
 
-        dual_reg_mod = linear_model.LinearRegression()
+        dual_reg_mod = linear_model.Ridge() if ridge else linear_model.LinearRegression()
         dual_reg_mod = dual_reg_mod.fit(X, y)
 
         dual_reg_mod.intercept_ = reg_mod[0].intercept_

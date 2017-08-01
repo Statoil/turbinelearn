@@ -47,11 +47,13 @@ def polynomialize_data(X, degree=2):
     return DataFrame(data=poly_X, index=X.index, columns=feature_names)
 
 
-def linear_regression(X, y, dual_model=False):
+def linear_regression(X, y, dual_model=False, ridge=False):
     if dual_model:
         return DualLinearModel.dual_regression(X, y)
 
     reg = linear_model.LinearRegression()
+    if ridge:
+        reg = linear_model.Ridge()
     reg = reg.fit(X, y)
     return reg
 
@@ -86,7 +88,12 @@ def evaluate(training_data, test_data, reg_mod, degree=2):
     return reg_res
 
 
-def regression(data_files, training_fraction=0.6, degree=2, limits=None, normalize=()):
+def regression(data_files,
+               training_fraction=0.6,
+               degree=2,
+               limits=None,
+               normalize=(),
+               ridge=False):
     dataset = None
 
     data = load_data(data_files)
@@ -109,7 +116,7 @@ def regression(data_files, training_fraction=0.6, degree=2, limits=None, normali
         logging.WARN(" >> Did not have enough data to do regression")
         return
 
-    reg_mod = linear_regression(*training_data)
+    reg_mod = linear_regression(*training_data, ridge=ridge)
 
     reg_res = evaluate(training_data, test_data, reg_mod, degree=degree)
     return dataset, (data, training_data, test_data, reg_mod), reg_res
@@ -185,7 +192,8 @@ def joined_regression(data_files,
                       degree=2,
                       dual_model=False,
                       limits=None,
-                      normalize=()):
+                      normalize=(),
+                      ridge=False):
     data, train, test = fetch_and_join_data(data_files,
                                             training_fraction=training_fraction,
                                             degree=degree,
@@ -193,7 +201,7 @@ def joined_regression(data_files,
                                             limits=limits,
                                             normalize=normalize)
 
-    reg_mod = linear_regression(*train, dual_model=dual_model)
+    reg_mod = linear_regression(*train, dual_model=dual_model, ridge=ridge)
     reg_res = evaluate(train, test, reg_mod, degree=degree)
     return data_files, (data, train, test, reg_mod), reg_res
 
@@ -221,14 +229,15 @@ def train_and_evaluate_single_file(data_file,
                                    training_fraction=0.6,
                                    degree=2,
                                    limits=None,
-                                   normalize=()):
+                                   normalize=(),
+                                   ridge=False):
     [data, training_data, test_data] = fetch_and_split_data(data_file,
                                                             training_fraction=training_fraction,
                                                             degree=degree,
                                                             limits=limits,
                                                             normalize=normalize)
 
-    reg_mod = linear_regression(*training_data)
+    reg_mod = linear_regression(*training_data, ridge=ridge)
     evaluate(training_data, test_data, reg_mod, degree=degree)
     return data, training_data, test_data, reg_mod
 
@@ -237,10 +246,12 @@ def individual_cross_validation(data_file,
                                 k=5,
                                 degree=2,
                                 limits=None,
-                                normalize=()):
+                                normalize=(),
+                                ridge=False):
     data = fetch_data([data_file], degree=degree, limits=limits, normalize=normalize)
     # Split dataset into k consecutive folds (without shuffling).
-    scores = cross_val_score(linear_model.LinearRegression(), *data, cv=k)
+    model = linear_model.Ridge() if ridge else linear_model.LinearRegression()
+    scores = cross_val_score(model, *data, cv=k)
     logging.info("Accuracy: %0.4f (+/- %0.4f)" % (scores.mean(), scores.std() * 2))
     logging.info("Scores:   %s" % ", ".join(['%.4f' % s for s in scores]))
 
@@ -260,7 +271,12 @@ def pca(data_file, limits=None, normalize=()):
     return X_1, X_2, y
 
 
-def compute_learning_progress(data_files, steps=10, degree=2, limits=None, normalize=()):
+def compute_learning_progress(data_files,
+                              steps=10,
+                              degree=2,
+                              limits=None,
+                              normalize=(),
+                              ridge=False):
     """Trains a polynomial with n/steps fraction increments.  Returns error."""
 
     data = load_data(data_files)
@@ -285,7 +301,7 @@ def compute_learning_progress(data_files, steps=10, degree=2, limits=None, norma
             logging.WARN(" >> Did not have enough data to do regression")
             continue
 
-        reg_mod = linear_regression(*training_data)
+        reg_mod = linear_regression(*training_data, ridge=ridge)
 
         reg_res = do_evaluate(training_data, test_data, reg_mod, degree=2)
         progress.append(reg_res)
@@ -317,14 +333,15 @@ def filebased_cross_validation(data_files,
                                degree=2,
                                dual_model=False,
                                limits=None,
-                               normalize=()):
+                               normalize=(),
+                               ridge=False):
 
     logging.info("\nTraining on data_files %s " % ", ".join(data_files))
 
     data = fetch_data(data_files, degree=degree,
                       dual_model=dual_model, limits=limits, normalize=normalize)
 
-    reg_mod = linear_regression(*data, dual_model=dual_model)
+    reg_mod = linear_regression(*data, dual_model=dual_model, ridge=ridge)
 
     r2_scores = [reg_mod.score(*data)]
     learning_results = []
@@ -345,7 +362,8 @@ def file_cross_val(data_files,
                    degree=2,
                    dual_model=False,
                    limits=None,
-                   normalize=()):
+                   normalize=(),
+                   ridge=False):
     test_data = []
     learning_results = []
 
@@ -355,7 +373,8 @@ def file_cross_val(data_files,
                                                     degree=degree,
                                                     dual_model=dual_model,
                                                     limits=limits,
-                                                    normalize=normalize)
+                                                    normalize=normalize,
+                                                    ridge=ridge)
 
         test_data.append((training_set, test_set, r2_scores))
         learning_results.append(res)
