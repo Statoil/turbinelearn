@@ -201,6 +201,7 @@ def method_simple(params):
             logging.ERROR('Could not train on file %s: %s' % (input_file, err))
             return
         visualize(*full_model)
+    plt.show()
 
 
 def method_pca(params):
