@@ -25,7 +25,7 @@ LearningResult = namedtuple('LearningResult',
                              'r2_test',
                              'rms_train',
                              'rms_test',
-                             'gen_pol'])
+                             'polynomial'])
 
 
 def detect_outliers(data):
@@ -57,12 +57,12 @@ def do_evaluate(training_data, test_data, reg_mod, degree=2):
     r2_test  = reg_mod.score(*test_data)
     rms_train = mean_squared_error(training_data[1], reg_mod.predict(training_data[0]))
     rms_test  = mean_squared_error(test_data[1], reg_mod.predict(test_data[0]))
-    gen_pol = generate_polynomial(reg_mod, features=list(training_data[0]))
+    polynomial = generate_polynomial(reg_mod, features=list(training_data[0]))
     res = LearningResult(r2_train=r2_train,
                          r2_test=r2_test,
                          rms_train=rms_train,
                          rms_test=rms_test,
-                         gen_pol=gen_pol)
+                         polynomial=polynomial)
     return res
 
 
@@ -73,7 +73,7 @@ def print_result(learning_result):
     logging.info("RMS training: %.5f" % learning_result.rms_train)
     logging.info("RMS test:     %.5f" % learning_result.rms_test)
 
-    logging.info("Generated polynomial:\n\t %s" % learning_result.gen_pol)
+    logging.info("Generated polynomial:\n\t %s" % learning_result.polynomial)
 
 
 def evaluate(training_data, test_data, reg_mod, degree=2):

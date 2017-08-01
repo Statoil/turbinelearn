@@ -166,7 +166,7 @@ def method_fcv(params):
         for res in case:
             if best is None or res.r2_test > best.r2_test:
                 best = res
-    print('%s' % best.gen_pol)
+    print('%s' % best.polynomial)
     print('Score: %.3f' % best.r2_test)
     return best
 
@@ -253,7 +253,6 @@ def method_reg(params):
                                                normalize=get_normalize(params))
         visualize(*full_model)
         _plot_reg(params, data, i)
-        # The generated polynomial is in reg_res.gen_pol
     plt.show()
 
 
