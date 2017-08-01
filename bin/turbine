@@ -321,6 +321,8 @@ def main(args, dataset):
         'prediction' : method_prediction,
         'reg'    : method_reg
     }
+    if params.clean:
+        logging.info('Cleaning data:\n\t%s' % '\n\t'.join(map(str, [(k, LIMITS[k]) for k in LIMITS])))
     fn = methods[args.method]
     fn(params)
 
