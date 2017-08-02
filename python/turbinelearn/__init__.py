@@ -11,7 +11,7 @@ from .turbine_regression import detect_outliers
 
 from .dual_linear_regression import DualLinearModel
 
-TURBINELEARN_VERSION = '0.3.1'
+TURBINELEARN_VERSION = '0.3.2'
 __version__ = TURBINELEARN_VERSION
 
 __copyright__ = 'Copyright 2017, Statoil ASA'
