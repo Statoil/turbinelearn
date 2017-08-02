@@ -83,6 +83,10 @@ def print_result(learning_result):
 
 
 def evaluate(training_data, test_data, reg_mod, degree=2, purge=0):
+    if purge > 0:
+        # if purge > 0 we want to output the R^2 score also before purging
+        reg_res = do_evaluate(training_data, test_data, reg_mod, degree=2, purge=0)
+        logging.info("R^2 test pre-purge:  %.5f" % reg_res.r2_test)
     reg_res = do_evaluate(training_data, test_data, reg_mod, degree=2, purge=purge)
     print_result(reg_res)
     return reg_res
@@ -314,11 +318,19 @@ def _translate(s, mapping):
     return s
 
 def generate_polynomial_terms(linear_model, features, purge=0):
+    """Notice that if you call this function with purge > 0, the linear model may be
+    altered.
+
+    """
     yield (linear_model.coef_[0] + linear_model.intercept_)
     features = [_translate(f, POLYNOMIAL_MAP) for f in features]
-    for variable, coef in zip(features, linear_model.coef_):
+    for i in range(len(features)):
+        coef, variable = linear_model.coef_[i], features[i]
         if abs(coef) >= purge:
             yield (coef, variable)
+        else:
+            if isinstance(linear_model.coef_, np.ndarray):
+                linear_model.coef_[i] = 0
 
 def generate_polynomial(linear_model, features, purge=0):
     float_fmt = '%.4f'
