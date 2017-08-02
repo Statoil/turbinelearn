@@ -58,12 +58,12 @@ def linear_regression(X, y, dual_model=False, ridge=False):
     return reg
 
 
-def do_evaluate(training_data, test_data, reg_mod, degree=2):
+def do_evaluate(training_data, test_data, reg_mod, degree=2, purge=0):
     r2_train = reg_mod.score(*training_data)
     r2_test  = reg_mod.score(*test_data)
     rms_train = mean_squared_error(training_data[1], reg_mod.predict(training_data[0]))
     rms_test  = mean_squared_error(test_data[1], reg_mod.predict(test_data[0]))
-    polynomial = generate_polynomial(reg_mod, features=list(training_data[0]))
+    polynomial = generate_polynomial(reg_mod, features=list(training_data[0]), purge=purge)
     res = LearningResult(r2_train=r2_train,
                          r2_test=r2_test,
                          rms_train=rms_train,
@@ -82,8 +82,8 @@ def print_result(learning_result):
     logging.info("Generated polynomial:\n\t %s" % learning_result.polynomial)
 
 
-def evaluate(training_data, test_data, reg_mod, degree=2):
-    reg_res = do_evaluate(training_data, test_data, reg_mod, degree=2)
+def evaluate(training_data, test_data, reg_mod, degree=2, purge=0):
+    reg_res = do_evaluate(training_data, test_data, reg_mod, degree=2, purge=purge)
     print_result(reg_res)
     return reg_res
 
@@ -193,6 +193,7 @@ def joined_regression(data_files,
                       dual_model=False,
                       limits=None,
                       normalize=(),
+                      purge=0,
                       ridge=False):
     data, train, test = fetch_and_join_data(data_files,
                                             training_fraction=training_fraction,
@@ -202,7 +203,7 @@ def joined_regression(data_files,
                                             normalize=normalize)
 
     reg_mod = linear_regression(*train, dual_model=dual_model, ridge=ridge)
-    reg_res = evaluate(train, test, reg_mod, degree=degree)
+    reg_res = evaluate(train, test, reg_mod, degree=degree, purge=purge)
     return data_files, (data, train, test, reg_mod), reg_res
 
 
@@ -312,13 +313,15 @@ def _translate(s, mapping):
         s = s.replace(k, mapping[k])
     return s
 
-def generate_polynomial(linear_model, features, linebreak=False):
+def generate_polynomial(linear_model, features, linebreak=False, purge=0):
     float_fmt = '%.4f'
 
     features = [_translate(f, POLYNOMIAL_MAP) for f in features]
 
     polypoly = float_fmt % (linear_model.coef_[0] + linear_model.intercept_)
     for variable, coef in zip(features, linear_model.coef_):
+        if abs(coef) < purge:
+            continue
         sep = "\n\t" if linebreak else " "
         polypoly += sep
         polypoly += "+ " if coef >= 0 else "- "
