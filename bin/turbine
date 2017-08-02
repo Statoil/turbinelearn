@@ -27,7 +27,7 @@ except ImportError as err:
 LearningParameter = namedtuple('LearningParameter',
                                ['degree', 'training_fraction', 'k',
                                 'dataset', 'clean', 'normalize',
-                                'dual_model', 'ridge'])
+                                'dual_model', 'dual_export', 'ridge'])
 
 
 def get_prediction(params, i):
@@ -107,6 +107,10 @@ def create_argparse():
                         help='Will build separate models for HG and HT before combining them, defaults to --no-dual')
     parser.add_argument('--no-dual', dest='dual', action='store_false')
     parser.set_defaults(dual=False)
+    parser.add_argument('-dx', '--dual_export', dest='dual_export', action='store_true',
+                        help='Sets --dual to true and exports separate models for HG and HT')
+    parser.set_defaults(dual_export=False)
+
     parser.add_argument('--ridge', dest='ridge', action='store_true',
                         help='Will choose ridge regression over linear regression.')
     parser.set_defaults(ridge=False)
@@ -139,6 +143,7 @@ def method_fcv(params):
                                           limits=get_limits(params),
                                           normalize=get_normalize(params),
                                           dual_model=params.dual_model,
+                                          dual_export=params.dual_export,
                                           ridge=params.ridge)
 
     logging.info("\n\n\n\n################ SUMMARY ###############")
@@ -270,16 +275,30 @@ def method_reg(params):
 
 
 def method_export(params):
-    _, _, reg_res = joined_regression(params.dataset,
-                                      training_fraction=params.training_fraction,
-                                      degree=params.degree,
-                                      dual_model=params.dual_model,
-                                      limits=get_limits(params),
-                                      normalize=get_normalize(params),
-                                      ridge=params.ridge)
+    if not params.dual_export:
+        _, _, reg_res = joined_regression(params.dataset,
+                                          training_fraction=params.training_fraction,
+                                          degree=params.degree,
+                                          dual_model=params.dual_model,
+                                          limits=get_limits(params),
+                                          normalize=get_normalize(params),
+                                          ridge=params.ridge)
 
-    print('R^2 score: %.4f' % reg_res.r2_test)
-    print(reg_res.polynomial)
+        print('R^2 score: %.4f' % reg_res.r2_test)
+        print(reg_res.polynomial)
+        return
+
+    for TY in ('HG', 'HT'):
+        _, _, reg_res = joined_regression([fname for fname in params.dataset if TY in fname],
+                                          training_fraction=params.training_fraction,
+                                          degree=params.degree,
+                                          dual_model=False, # not needed: separated dataset
+                                          limits=get_limits(params),
+                                          normalize=get_normalize(params),
+                                          ridge=params.ridge)
+        print('Polynomial for type %s:' % TY)
+        print('    R^2 score: %.4f' % reg_res.r2_test)
+        print('    %s' % reg_res.polynomial)
 
 
 def method_progress(params):
@@ -329,13 +348,18 @@ def method_progress(params):
 
 
 def main(args, dataset):
+    dual = args.dual
+    if not dual and args.dual_export:
+        dual = True
+        logging.warn('--dual_export sets --dual')
     params = LearningParameter(degree=args.degree,
                                k=args.k,
                                training_fraction=args.training_fraction,
                                dataset=dataset,
                                clean=args.clean,
                                normalize=args.normalize,
-                               dual_model=args.dual,
+                               dual_model=dual,
+                               dual_export=args.dual_export,
                                ridge=args.ridge)
     print_params(args, dataset)
     methods = {
@@ -359,6 +383,7 @@ def print_params(args, dataset):
     logging.info('\tDataset:     %s' % dataset)
     logging.info('\tMethod:      %s' % args.method)
     logging.info('\tdual:        %s' % ('Dual model' if args.dual else 'Monomodel'))
+    logging.info('\tdual_export: %s' % ('Dual export' if args.dual_export else 'No'))
     logging.info('\tridge:       %s' % ('Ridge regression' if args.ridge else 'Linear regression'))
     logging.info('\tdegree:      %s' % args.degree)
     logging.info('\tk-fold cv:   k=%s' % args.k)
@@ -378,8 +403,9 @@ def filter_dataset(dataset, filter):
 
 if __name__ == "__main__":
     args, dataset = create_argparse()
-    if args.dual and args.dataset in ['HG', 'HT']:
-        exit('Cannot use both --dual and --dataset')
+    dual = args.dual or args.dual_export
+    if dual and args.dataset in ['HG', 'HT']:
+        exit('Cannot use both --dual/--dual_export and --dataset')
     if args.version:
         print('turbinelearn version %s' % TURBINELEARN_VERSION)
         exit(0)
