@@ -26,11 +26,12 @@ FEATURE_MAP = {
 }
 
 POLYNOMIAL_MAP = {
-    "AIR_IN_TEMP" : "TI",
-    "AIR_IN_PRES" : "PI",
-    "DISCHARGE_TEMP" : "TT",
-    "DISCHARGE_PRES" : "PT",
+    "AIR_IN_TEMP" : "T1",
+    "AIR_IN_PRES" : "P1",
+    "DISCHARGE_TEMP" : "T2",
+    "DISCHARGE_PRES" : "P2",
     "SIMULATED_EFF" : "EFF",
+    "TURBINE_TYPE" : "TY",
     "SPEED" : "SI"
 }
 
