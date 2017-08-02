@@ -26,7 +26,7 @@ except ImportError as err:
 
 LearningParameter = namedtuple('LearningParameter',
                                ['degree', 'training_fraction', 'k',
-                                'dataset', 'clean', 'normalize',
+                                'dataset', 'clean', 'normalize', 'purge',
                                 'dual_model', 'dual_export', 'ridge'])
 
 
@@ -37,6 +37,7 @@ def get_prediction(params, i):
                                          degree=params.degree,
                                          limits=get_limits(params),
                                          normalize=get_normalize(params),
+                                         purge=params.purge,
                                          ridge=params.ridge)
     data, training_data, test_data, reg_mod = res
     X, y = test_data
@@ -93,6 +94,8 @@ def create_argparse():
                         help='Whether to perform data normalization (not needed for polynomial model), defaults to --no-normalize.')
     parser.add_argument('--no-normalize', dest='normalize', action='store_false')
     parser.set_defaults(normalize=False)
+    parser.add_argument('-p', '--purge', dest='purge', type=float, default=0,
+                        help='Purge small coefficients from exported polynomial.')
 
     parser.add_argument('-t', '--training-fraction', dest='training_fraction', type=float, default=0.6,
                         help='The fraction of data to use as training data, only used when method=simple')
@@ -142,6 +145,7 @@ def method_fcv(params):
                                           degree=params.degree,
                                           limits=get_limits(params),
                                           normalize=get_normalize(params),
+                                          purge=params.purge,
                                           dual_model=params.dual_model,
                                           dual_export=params.dual_export,
                                           ridge=params.ridge)
@@ -275,30 +279,26 @@ def method_reg(params):
 
 
 def method_export(params):
-    if not params.dual_export:
-        _, _, reg_res = joined_regression(params.dataset,
+    TYPES = ('',)
+    dual = params.dual_model
+    if params.dual_export:
+        TYPES = ('HG', 'HT')
+        dual = False # not needed when we run separate trainings
+
+    for TY in TYPES:
+        dataset = [fname for fname in params.dataset if TY in fname]
+        _, _, reg_res = joined_regression(dataset,
                                           training_fraction=params.training_fraction,
                                           degree=params.degree,
-                                          dual_model=params.dual_model,
+                                          dual_model=dual,
                                           limits=get_limits(params),
                                           normalize=get_normalize(params),
+                                          purge=params.purge,
                                           ridge=params.ridge)
-
+        if len(TYPES) > 1:
+            print('\nPolynomial for type %s:' % TY)
         print('R^2 score: %.4f' % reg_res.r2_test)
-        print(reg_res.polynomial)
-        return
-
-    for TY in ('HG', 'HT'):
-        _, _, reg_res = joined_regression([fname for fname in params.dataset if TY in fname],
-                                          training_fraction=params.training_fraction,
-                                          degree=params.degree,
-                                          dual_model=False, # not needed: separated dataset
-                                          limits=get_limits(params),
-                                          normalize=get_normalize(params),
-                                          ridge=params.ridge)
-        print('Polynomial for type %s:' % TY)
-        print('    R^2 score: %.4f' % reg_res.r2_test)
-        print('    %s' % reg_res.polynomial)
+        print('%s' % reg_res.polynomial)
 
 
 def method_progress(params):
@@ -358,6 +358,7 @@ def main(args, dataset):
                                dataset=dataset,
                                clean=args.clean,
                                normalize=args.normalize,
+                               purge=args.purge,
                                dual_model=dual,
                                dual_export=args.dual_export,
                                ridge=args.ridge)
@@ -379,6 +380,7 @@ def main(args, dataset):
 
 
 def print_params(args, dataset):
+    logging.info('Arguments:   %s' % args)
     logging.info('\nSettings:')
     logging.info('\tDataset:     %s' % dataset)
     logging.info('\tMethod:      %s' % args.method)
