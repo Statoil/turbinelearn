@@ -313,17 +313,19 @@ def _translate(s, mapping):
         s = s.replace(k, mapping[k])
     return s
 
-def generate_polynomial(linear_model, features, linebreak=False, purge=0):
-    float_fmt = '%.4f'
-
+def generate_polynomial_terms(linear_model, features, purge=0):
+    yield (linear_model.coef_[0] + linear_model.intercept_)
     features = [_translate(f, POLYNOMIAL_MAP) for f in features]
-
-    polypoly = float_fmt % (linear_model.coef_[0] + linear_model.intercept_)
     for variable, coef in zip(features, linear_model.coef_):
-        if abs(coef) < purge:
-            continue
-        sep = "\n\t" if linebreak else " "
-        polypoly += sep
+        if abs(coef) >= purge:
+            yield (coef, variable)
+
+def generate_polynomial(linear_model, features, purge=0):
+    float_fmt = '%.4f'
+    terms = list(generate_polynomial_terms(linear_model, features, purge=purge))
+    polypoly = float_fmt % terms[0]
+    for coef, variable in terms[1:]:
+        polypoly += " "
         polypoly += "+ " if coef >= 0 else "- "
         polypoly += float_fmt % abs(coef) + "*" + variable
 
