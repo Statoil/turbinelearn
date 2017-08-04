@@ -145,9 +145,7 @@ def method_fcv(params):
                                           degree=params.degree,
                                           limits=get_limits(params),
                                           normalize=get_normalize(params),
-                                          purge=params.purge,
                                           dual_model=params.dual_model,
-                                          dual_export=params.dual_export,
                                           ridge=params.ridge)
 
     logging.info("\n\n\n\n################ SUMMARY ###############")
