@@ -18,12 +18,6 @@ class TestLearning(TestCase):
     def preprocess(self):
         self.data = tblearn.preprocess_data(self.data)
 
-    def test_outlier(self):
-        self.assertNotIn('OUTLIER', self.data)
-        self.preprocess()
-        tblearn.detect_outliers(self.data)
-        self.assertIn('OUTLIER', self.data)
-
     def test_pca(self):
         X_1, X_2, y = tblearn.pca(self.fname, limits=tblearn.LIMITS)
         self.assertEqual(1438, len(X_1))
