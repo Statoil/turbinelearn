@@ -11,7 +11,6 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import cross_val_score
 from sklearn.decomposition import PCA
-from sklearn.ensemble import IsolationForest
 
 from .turbine_file import (enum_files, load_single_file, load_data,
                            normalize_column, preprocess_data, split_data_set,
@@ -28,13 +27,6 @@ LearningResult = namedtuple('LearningResult',
                              'rms_test',
                              'polynomial'])
 
-
-def detect_outliers(data):
-    clf = IsolationForest()
-    X = data[FEATURES + [TARGET]]
-    clf.fit(X)
-    Z = clf.decision_function(X)
-    data['OUTLIER'] = Z
 
 
 def polynomialize_data(X, degree=2):
