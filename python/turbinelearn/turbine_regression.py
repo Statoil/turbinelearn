@@ -325,7 +325,7 @@ def generate_polynomial_terms(linear_model, features, purge=0):
                 linear_model.coef_[i] = 0
 
 def generate_polynomial(linear_model, features, purge=0):
-    float_fmt = '%.4f'
+    float_fmt = '%.10f'
     terms = list(generate_polynomial_terms(linear_model, features, purge=purge))
     polypoly = float_fmt % terms[0]
     for coef, variable in terms[1:]:
