@@ -13,7 +13,7 @@ LIMITS =   {'SPEED'          : (5000, 10000),
             'AIR_IN_PRES'    : (0.8, 1.1),
             'DISCHARGE_TEMP' : (0, 600),
             'DISCHARGE_PRES' : (5, 20),
-            'TIME':            (dt(2016,01,21), dt(2100,1,1))  # [2016-01-01, 2016-01-21]  seems to be broken
+            'TIME':            (dt(2016,1,21), dt(2100,1,1))  # [2016-01-01, 2016-01-21]  seems to be broken
 }
 
 FEATURE_MAP = {

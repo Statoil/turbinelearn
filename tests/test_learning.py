@@ -1,11 +1,14 @@
+#!/usr/bin/env python
+from __future__ import print_function
+
 import os
 import itertools
-from unittest import TestCase
+import unittest
 
 import turbinelearn as tblearn
 from datasets import relpath
 
-class TestLearning(TestCase):
+class TestLearning(unittest.TestCase):
 
     def setUp(self):
         self.fname = relpath('old_data', 'turbin_data.csv')
@@ -68,3 +71,7 @@ class TestLearning(TestCase):
                     "Minimum fcv test score was %f, expected > %f" %
                     (min_test_score, quality_threshold)
                     )
+
+
+if __name__ == '__main__':
+    unittest.main()

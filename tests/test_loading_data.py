@@ -1,11 +1,14 @@
+#!/usr/bin/env python
+from __future__ import print_function
+
 import os
 from datetime import datetime as dt
-from unittest import TestCase
+import unittest
 
 import turbinelearn as tblearn
 from datasets import relpath
 
-class TestLoadingData(TestCase):
+class TestLoadingData(unittest.TestCase):
 
     def setUp(self):
         fname = relpath('old_data', 'turbin_data.csv')
@@ -45,7 +48,7 @@ class TestLoadingData(TestCase):
         self.assertTrue(max(data['SPEED']) <= speed_max)
 
     def test_limit_time(self):
-        window = dt(2016,12,01), dt(2017,01,01)
+        window = dt(2016,12,1), dt(2017,1,1)
         limits = {'TIME': window}
         features = tblearn.FEATURES
         data = tblearn.preprocess_data(self.data, features=features, limits=limits)
@@ -53,6 +56,10 @@ class TestLoadingData(TestCase):
         # First row: 12/1/2016 2:00;17.248752;1.0051291;24.002418;1.0174102;...
         accuracy = 3 # 3 digits?
         self.assertAlmostEqual(data['AIR_IN_TEMP'][0],    17.2488, accuracy)
-        self.assertAlmostEqual(data['AIR_IN_PRES'][0],    01.0051, accuracy)
+        self.assertAlmostEqual(data['AIR_IN_PRES'][0],     1.0051, accuracy)
         self.assertAlmostEqual(data['DISCHARGE_TEMP'][0], 24.0024, accuracy)
-        self.assertAlmostEqual(data['DISCHARGE_PRES'][0], 01.0174, accuracy)
+        self.assertAlmostEqual(data['DISCHARGE_PRES'][0],  1.0174, accuracy)
+
+
+if __name__ == '__main__':
+    unittest.main()

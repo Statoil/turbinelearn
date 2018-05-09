@@ -1,4 +1,7 @@
-from unittest import TestCase
+#!/usr/bin/env python
+from __future__ import print_function
+
+import unittest
 import numpy as np
 from pandas import Series
 from sklearn import linear_model
@@ -7,7 +10,7 @@ from turbinelearn import DualLinearModel
 import turbinelearn as tblearn
 from datasets import relpath
 
-class TestDualLearning(TestCase):
+class TestDualLearning(unittest.TestCase):
 
     def setUp(self):
         self.fnames = [relpath('data', 'LOCO_B_HTA.csv'),
@@ -72,3 +75,7 @@ class TestDualLearning(TestCase):
 
             error = abs(sub_pred-dual_pred)
             self.assertTrue(max(error) < 1e-10)
+
+
+if __name__ == '__main__':
+    unittest.main()
