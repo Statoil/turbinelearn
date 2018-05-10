@@ -11,7 +11,7 @@ from datasets import relpath
 class TestLoadingData(unittest.TestCase):
 
     def setUp(self):
-        fname = relpath('old_data', 'turbin_data.csv')
+        fname = relpath('data', 'loco.csv')
         self.data = tblearn.load_data(fname)
 
     def test_load(self):

@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 try:
     import sklearn
-    sklearn_version = map(int, sklearn.__version__.split('.'))
+    sklearn_version = tuple(map(int, sklearn.__version__.split('.')))
     if sklearn_version[0] == 0 and sklearn_version[1] < 18:
         exit('Too old sklearn, needs at least 0.18.2, was: %s' %
              sklearn.__version__)

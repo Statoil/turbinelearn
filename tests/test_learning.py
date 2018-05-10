@@ -11,12 +11,12 @@ from datasets import relpath
 class TestLearning(unittest.TestCase):
 
     def setUp(self):
-        self.fname = relpath('old_data', 'turbin_data.csv')
+        self.fname = relpath('data', 'loco.csv')
         self.data = tblearn.load_data(self.fname)
-        self.data_files = map(relpath, [
-            'data/LOCO_B_HGA.csv', 'data/LOCO_B_HGB.csv',
-            'data/LOCO_B_HTA.csv', 'data/LOCO_B_HTB.csv',
-        ])
+        self.data_files = [] #  TODO was: map(relpath, [
+#            'data/LOCO_B_HGA.csv', 'data/LOCO_B_HGB.csv',
+#            'data/LOCO_B_HTA.csv', 'data/LOCO_B_HTB.csv',
+#        ])
 
     def preprocess(self):
         self.data = tblearn.preprocess_data(self.data)
